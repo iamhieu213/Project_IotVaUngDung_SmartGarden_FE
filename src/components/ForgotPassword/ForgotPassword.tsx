@@ -1,6 +1,9 @@
-// ForgotPassword.tsx
+// src/components/ForgotPassword/ForgotPassword.tsx
 import React, { useState } from 'react';
 import './ForgotPassword.css';
+import { Link } from 'react-router-dom';
+import api from '../../utils/api';
+import Swal from 'sweetalert2';
 
 export const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -15,33 +18,35 @@ export const ForgotPassword: React.FC = () => {
     setMessage('');
 
     try {
-      // Kết nối trực tiếp với API Backend của bạn (thay đổi URL nếu cần)
-      const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
+      const response = await api.post('/auth/forgot-password', { email });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (response.data.success) {
         setStatus('success');
-        // Lưu ý: Với hệ thống IoT đơn giản, token được trả về ngay trong response.data.token
-        // Client có thể in ra console log để dễ dàng copy/paste làm bước reset-password
-        console.log('Mã khôi phục nhận từ API:', data.data?.token);
+        const token = response.data.data?.token;
+        // In ra console log để dev dễ lấy token test API
+        console.log('Mã reset token nhận từ API:', token);
         
-        setMessage(
-          data.message || 'Mã khôi phục mật khẩu đã được tạo thành công.'
-        );
-      } else {
-        setStatus('error');
-        setMessage(data.message || 'Có lỗi xảy ra khi yêu cầu khôi phục mật khẩu.');
+        const successMsg = response.data.message || 'Mã khôi phục mật khẩu đã được tạo thành công.';
+        setMessage(successMsg);
+
+        await Swal.fire({
+          icon: 'success',
+          title: 'Yêu cầu thành công',
+          html: `Mã khôi phục mật khẩu đã được tạo!<br/><b>Mã Token:</b> ${token || 'Đã gửi qua email'}`,
+          confirmButtonText: 'Đóng',
+        });
       }
     } catch (error: any) {
       setStatus('error');
-      setMessage(error.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+      const errorMsg = error.response?.data?.message || 'Có lỗi xảy ra hoặc email không tồn tại.';
+      setMessage(errorMsg);
+
+      await Swal.fire({
+        icon: 'error',
+        title: 'Yêu cầu thất bại',
+        text: errorMsg,
+        confirmButtonText: 'Thử lại',
+      });
     }
   };
 
@@ -183,10 +188,10 @@ export const ForgotPassword: React.FC = () => {
             </form>
 
             <div className="bottom-navigation">
-              <a href="/login" className="back-link">
+              <Link to="/login" className="back-link">
                 <span className="material-symbols-outlined arrow-back">arrow_back</span>
                 Quay lại Đăng nhập
-              </a>
+              </Link>
             </div>
 
             {/* Footer Support */}

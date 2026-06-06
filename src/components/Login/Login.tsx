@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Login.css';
-import { Link } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
-import api from '../../utils/api'
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
+import Swal from 'sweetalert2';
+
 interface LoginProps {
   onLoginSuccess?: () => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesContainerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +67,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = '#6ffbbe'; // bright green matching --primary-fixed
-      
+
       particles.forEach((p) => {
         ctx.globalAlpha = p.opacity;
         ctx.beginPath();
@@ -71,7 +76,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         p.y -= p.speedY;
         if (p.y < -10) p.y = height + 10;
       });
-      
+
       animationFrameId.current = requestAnimationFrame(animate);
     };
 
@@ -92,19 +97,49 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     };
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (status !== 'idle') return;
 
     setStatus('submitting');
+    setErrorMsg('');
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      if (response.data.success) {
+        const { accessToken, refreshToken, user } = response.data.data;
 
-    setTimeout(() => {
-      setStatus('success');
-      
-      if (onLoginSuccess) {
-        setTimeout(onLoginSuccess, 1000);
+        login(accessToken, refreshToken, user);
+
+        setStatus('success');
+
+        await Swal.fire({
+          icon: 'success',
+          title: 'Đăng nhập thành công',
+          text: `Xin chào ${user.username}!`,
+          timer: 1500,
+          showConfirmButton: false,
+        });
+
+        navigate('/dashboard');
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        }
       }
-    }, 1500);
+    } catch (err: any) {
+      setStatus('idle');
+      const message =
+        err.response?.data?.message ||
+        'Email hoặc mật khẩu không chính xác.';
+
+      setErrorMsg(message);
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Đăng nhập thất bại',
+        text: message,
+        confirmButtonText: 'Đóng',
+      });
+    }
   };
 
   const togglePassword = () => {
@@ -127,7 +162,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuAABFFzVeqkfDElm1Ecv7_KiCSj49CYiFT8SwkHRDgovf0gCeBtuPoTxDLH_k3yT6qllkkFFdWnUXdtFpFI6H4evaW28e7GW17d26exnxOYvqNl3AjVSdAjN8SjjFA9b3NkVekRF_mWxgG20ymVdHkAbtDYLdz7Ct5B-rKo7R1VdcmBPF220qsC82h0rNSQl_gbcMn5r8S-PyAPJW5cvdTGTopXAzHVVSMo0YBUS_lzaIvbXGE1c71BeLHM6SeboFUrfJszcvTYeARS"
             />
           </div>
-          
+
           {/* Glassmorphism Branding Card */}
           <div className="branding-card glass-overlay">
             <div className="branding-header">
@@ -177,6 +212,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
             {/* Login Form */}
             <form className="login-form" onSubmit={handleSubmit}>
+              {errorMsg && (
+                <div className="login-error-alert" style={{ color: '#ba1a1a', backgroundColor: '#ffdad6', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>error</span>
+                  <span>{errorMsg}</span>
+                </div>
+              )}
               {/* Email Field */}
               <div className="input-group">
                 <label className="input-label" htmlFor="email">
@@ -194,6 +235,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={status !== 'idle'}
+                    autoComplete="username"
                   />
                 </div>
               </div>
@@ -220,6 +262,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={status !== 'idle'}
+                    autoComplete="current-password"
                   />
                   <button
                     className="password-toggle-btn"
@@ -276,8 +319,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 )}
               </button>
             </form>
-
-
 
             {/* Footer Link */}
             <p className="footer-text">

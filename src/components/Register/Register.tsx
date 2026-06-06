@@ -1,18 +1,24 @@
+// src/components/Register/Register.tsx
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Register.css';
+import api from '../../utils/api';
+import Swal from 'sweetalert2';
 
 interface RegisterProps {
   onRegisterSuccess?: () => void;
 }
 
 export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
+  
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
 
@@ -30,28 +36,70 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
     }, 700);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (status !== 'idle') return;
 
     if (password !== confirmPassword) {
-      alert('Mật khẩu xác nhận không trùng khớp!');
+      setErrorMsg('Mật khẩu xác nhận không trùng khớp.');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Mật khẩu không khớp',
+        text: 'Vui lòng kiểm tra lại mật khẩu xác nhận.',
+        confirmButtonText: 'Đóng',
+      });
       return;
     }
 
     if (!agreeTerms) {
-      alert('Bạn phải đồng ý với Điều khoản dịch vụ và Chính sách bảo mật!');
+      setErrorMsg('Bạn phải đồng ý với Điều khoản và Chính sách.');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Chưa đồng ý điều khoản',
+        text: 'Vui lòng tích chọn đồng ý điều khoản dịch vụ để tiếp tục.',
+        confirmButtonText: 'Đóng',
+      });
       return;
     }
 
     setStatus('submitting');
+    setErrorMsg('');
 
-    setTimeout(() => {
-      setStatus('success');
-      if (onRegisterSuccess) {
-        setTimeout(onRegisterSuccess, 1000);
+    try {
+      const response = await api.post('/auth/register', {
+        username,
+        email,
+        password
+      });
+
+      if (response.data.success) {
+        setStatus('success');
+        
+        await Swal.fire({
+          icon: 'success',
+          title: 'Đăng ký thành công',
+          text: 'Tài khoản của bạn đã được tạo thành công!',
+          timer: 1500,
+          showConfirmButton: false,
+        });
+
+        if (onRegisterSuccess) {
+          onRegisterSuccess();
+        } else {
+          navigate('/login');
+        }
       }
-    }, 1500);
+    } catch (err: any) {
+      setStatus('idle');
+      const message = err.response?.data?.message || 'Có lỗi xảy ra khi tạo tài khoản.';
+      setErrorMsg(message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Đăng ký thất bại',
+        text: message,
+        confirmButtonText: 'Thử lại',
+      });
+    }
   };
 
   return (
@@ -117,7 +165,16 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
 
             {/* Registration Form */}
             <form className="register-form" onSubmit={handleSubmit}>
-              {/* Username (Sửa fullname thành username theo yêu cầu) */}
+              
+              {/* Alert Error */}
+              {errorMsg && (
+                <div className="register-error-alert" style={{ color: '#ba1a1a', backgroundColor: '#ffdad6', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>error</span>
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              {/* Username */}
               <div className="input-group">
                 <label className="input-label" htmlFor="username">
                   Tên đăng nhập
@@ -136,6 +193,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
                     onFocus={() => setFocusedField('username')}
                     onBlur={() => setFocusedField(null)}
                     disabled={status !== 'idle'}
+                    autoComplete="username"
                   />
                 </div>
               </div>
@@ -159,6 +217,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                     disabled={status !== 'idle'}
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -183,6 +242,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
                       onFocus={() => setFocusedField('password')}
                       onBlur={() => setFocusedField(null)}
                       disabled={status !== 'idle'}
+                      autoComplete="new-password"
                     />
                   </div>
                 </div>
@@ -205,6 +265,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
                       onFocus={() => setFocusedField('confirm_password')}
                       onBlur={() => setFocusedField(null)}
                       disabled={status !== 'idle'}
+                      autoComplete="new-password"
                     />
                   </div>
                 </div>

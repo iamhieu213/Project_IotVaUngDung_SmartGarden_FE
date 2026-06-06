@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = 'http://localhost:3000/api'
+const API_BASE_URL = 'http://localhost:3000'
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -31,8 +31,14 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    // Kiểm tra nếu Backend báo lỗi 401 (Hết hạn Token) và request này chưa từng thử lại
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthRoute = originalRequest.url?.includes('/auth/login') ||
+                        originalRequest.url?.includes('/auth/register') ||
+                        originalRequest.url?.includes('/auth/forgot-password') ||
+                        originalRequest.url?.includes('/auth/reset-password') ||
+                        originalRequest.url?.includes('/auth/refresh-token');
+
+    // Kiểm tra nếu Backend báo lỗi 401 (Hết hạn Token), không phải route auth và request này chưa từng thử lại
+    if (error.response?.status === 401 && !isAuthRoute && !originalRequest._retry) {
       originalRequest._retry = true; // Đánh dấu đã thử lại một lần để tránh lặp vô tận
       
       const refreshToken = localStorage.getItem('refreshToken');

@@ -1,9 +1,13 @@
-// ResetPassword.tsx
+// src/components/ResetPassword/ResetPassword.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import './ResetPassword.css';
+import { Link, useNavigate } from 'react-router-dom';
+import api from '../../utils/api';
+import Swal from 'sweetalert2';
 
 export const ResetPassword: React.FC = () => {
-  // Lấy token từ query params trên URL (vd: ?token=xyz...)
+  const navigate = useNavigate();
+
   const getUrlToken = (): string => {
     const params = new URLSearchParams(window.location.search);
     return params.get('token') || '';
@@ -18,8 +22,8 @@ export const ResetPassword: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string>('');
   
-  // Tự động kiểm tra token từ URL khi component được nạp
   const [hasUrlToken, setHasUrlToken] = useState<boolean>(false);
+
   useEffect(() => {
     const t = getUrlToken();
     if (t) {
@@ -28,7 +32,6 @@ export const ResetPassword: React.FC = () => {
     }
   }, []);
 
-  // Tính toán độ mạnh mật khẩu (Password Strength) dùng useMemo
   const strength = useMemo(() => {
     const val = newPassword;
     let score = 0;
@@ -45,7 +48,7 @@ export const ResetPassword: React.FC = () => {
     if (requirements.uppercase) score++;
     if (requirements.long) score++;
 
-    const labels = ['Yếu', 'Trung bình', 'Mạnh', 'Bảo mật cao'];
+    const labels = ['Yêu cầu thêm', 'Trung bình', 'Mạnh', 'Bảo mật cao'];
     const colors = ['weak', 'fair', 'strong', 'secure'];
 
     return {
@@ -61,16 +64,34 @@ export const ResetPassword: React.FC = () => {
     if (!token) {
       setStatus('error');
       setMessage('Mã Token xác thực không được để trống.');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Thiếu Token',
+        text: 'Vui lòng cung cấp mã Token khôi phục mật khẩu.',
+        confirmButtonText: 'Đóng',
+      });
       return;
     }
     if (newPassword !== confirmPassword) {
       setStatus('error');
       setMessage('Mật khẩu xác nhận không trùng khớp.');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Mật khẩu không khớp',
+        text: 'Mật khẩu xác nhận phải giống mật khẩu mới.',
+        confirmButtonText: 'Đóng',
+      });
       return;
     }
     if (newPassword.length < 8) {
       setStatus('error');
       setMessage('Mật khẩu mới phải có ít nhất 8 ký tự.');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Mật khẩu yếu',
+        text: 'Vui lòng đảm bảo mật khẩu mới dài ít nhất 8 ký tự.',
+        confirmButtonText: 'Đóng',
+      });
       return;
     }
 
@@ -78,35 +99,37 @@ export const ResetPassword: React.FC = () => {
     setMessage('');
 
     try {
-      // Gọi API khôi phục mật khẩu thực tế từ Backend
-      const response = await fetch('http://localhost:5000/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          newPassword,
-          confirmPassword,
-        }),
+      const response = await api.post('/auth/reset-password', {
+        token,
+        newPassword,
+        confirmPassword,
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (response.data.success) {
         setStatus('success');
-        setMessage(data.message || 'Mật khẩu của bạn đã được cập nhật thành công.');
-        // Sau khi thành công có thể tự chuyển hướng sau 2 giây
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 2000);
-      } else {
-        setStatus('error');
-        setMessage(data.message || 'Cập nhật mật khẩu thất bại. Token có thể đã hết hạn.');
+        setMessage(response.data.message || 'Mật khẩu của bạn đã được cập nhật thành công.');
+        
+        await Swal.fire({
+          icon: 'success',
+          title: 'Đặt lại thành công',
+          text: 'Mật khẩu mới đã được cập nhật! Hệ thống đang chuyển về trang Đăng nhập.',
+          timer: 2000,
+          showConfirmButton: false,
+        });
+
+        navigate('/login');
       }
     } catch (error: any) {
       setStatus('error');
-      setMessage(error.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+      const errorMsg = error.response?.data?.message || 'Token không hợp lệ hoặc đã hết hạn.';
+      setMessage(errorMsg);
+
+      await Swal.fire({
+        icon: 'error',
+        title: 'Đặt lại thất bại',
+        text: errorMsg,
+        confirmButtonText: 'Thử lại',
+      });
     }
   };
 
@@ -114,7 +137,7 @@ export const ResetPassword: React.FC = () => {
     <div className="reset-password-container">
       <main className="main-layout">
         
-        {/* Left Side: Immersive Imagery (Ẩn trên thiết bị di động) */}
+        {/* Left Side: Immersive Imagery */}
         <section className="imagery-section">
           <img 
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDwN9XhVB2jMBqw7MWPMK6HSUSOt4u3tpHC4P9LZcpPy_KLArp6BR2TypxPT9ngwC_5IpWAAvRDqaKj0RhsC7ba50-Su4T6h_ZrLTtDkjx09McNjjEY6dT1eQ6uxFxrevV0OTtd1oC82fAQFMrkq7WwqtF5mVmy1jhe1boxN9G-mVrQ2V90AXC3zOXRaD6cJHOjSyhAwxJ1OMtdRvYSY7YqEoLRfoFNWqmOdw2_dYRC1FITak9mSO2IGcfRu23GFdRHGzqTNdjfhAn" 
@@ -136,7 +159,6 @@ export const ResetPassword: React.FC = () => {
         <section className="form-section">
           <div className="form-content">
             
-            {/* Brand Header */}
             <div className="brand-header">
               <div className="brand-logo-group">
                 <span className="material-symbols-outlined logo-icon">grid_view</span>
@@ -150,7 +172,6 @@ export const ResetPassword: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="form-fields">
               
-              {/* Token Input (Chỉ hiển thị nếu không tìm thấy token trong URL) */}
               {!hasUrlToken && (
                 <div className="form-group">
                   <label className="input-label" htmlFor="token">Mã Token xác thực</label>
@@ -170,7 +191,6 @@ export const ResetPassword: React.FC = () => {
                 </div>
               )}
 
-              {/* New Password Field */}
               <div className="form-group">
                 <label className="input-label" htmlFor="new-password">Mật khẩu mới</label>
                 <div className="input-relative">
@@ -184,6 +204,7 @@ export const ResetPassword: React.FC = () => {
                     className="form-input"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
                   />
                   <button
                     type="button"
@@ -196,7 +217,6 @@ export const ResetPassword: React.FC = () => {
                   </button>
                 </div>
                 
-                {/* Password Strength Indicator */}
                 <div className="strength-bars-container">
                   <div className={`strength-bar ${strength.score >= 1 ? strength.colorClass : ''}`}></div>
                   <div className={`strength-bar ${strength.score >= 2 ? strength.colorClass : ''}`}></div>
@@ -208,7 +228,6 @@ export const ResetPassword: React.FC = () => {
                 </p>
               </div>
 
-              {/* Confirm Password Field */}
               <div className="form-group">
                 <label className="input-label" htmlFor="confirm-password">Xác nhận mật khẩu mới</label>
                 <div className="input-relative">
@@ -222,6 +241,7 @@ export const ResetPassword: React.FC = () => {
                     className="form-input"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
                   />
                   <button
                     type="button"
@@ -235,7 +255,6 @@ export const ResetPassword: React.FC = () => {
                 </div>
               </div>
 
-              {/* Password Requirements */}
               <div className="requirements-card">
                 <p className="requirements-title">YÊU CẦU MẬT KHẨU BẮT BUỘC:</p>
                 <ul className="requirements-list">
@@ -254,7 +273,6 @@ export const ResetPassword: React.FC = () => {
                 </ul>
               </div>
 
-              {/* Alert Notifications */}
               {status === 'error' && (
                 <div className="alert-box error-alert">
                   <span className="material-symbols-outlined">error</span>
@@ -265,11 +283,10 @@ export const ResetPassword: React.FC = () => {
               {status === 'success' && (
                 <div className="alert-box success-alert">
                   <span className="material-symbols-outlined">check_circle</span>
-                  <span>{message} Đang chuyển hướng về trang đăng nhập...</span>
+                  <span>{message} Đang về trang đăng nhập...</span>
                 </div>
               )}
 
-              {/* Reset Submit Button */}
               <button
                 type="submit"
                 disabled={status === 'loading' || status === 'success'}
@@ -288,9 +305,8 @@ export const ResetPassword: React.FC = () => {
                 )}
               </button>
 
-              {/* Back to Sign In */}
               <div className="back-navigation">
-                <a href="/login" className="back-to-signin-link">Quay lại Đăng nhập</a>
+                <Link to="/login" className="back-to-signin-link">Quay lại Đăng nhập</Link>
               </div>
 
             </form>
@@ -299,7 +315,6 @@ export const ResetPassword: React.FC = () => {
 
       </main>
 
-      {/* Footer Segment */}
       <footer className="footer-container">
         <p className="footer-copyright">© 2024 Mycelium Intelligence Systems</p>
         <div className="footer-links">

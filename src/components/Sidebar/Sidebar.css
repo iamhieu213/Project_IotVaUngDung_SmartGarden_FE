@@ -135,6 +135,16 @@
   line-height: 1;
 }
 
+/* Logout Button Custom Styling */
+.logout-btn {
+  color: #ffb3af !important;
+}
+
+.logout-btn:hover {
+  background-color: rgba(186, 26, 26, 0.15) !important;
+  color: #ffffff !important;
+}
+
 .sidebar-item-label {
   font-size: 12px;
   line-height: 16px;

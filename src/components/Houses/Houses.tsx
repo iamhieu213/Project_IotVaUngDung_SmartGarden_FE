@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../Sidebar/Sidebar';
 import './Houses.css';
+import { useAuth } from '../../context/AuthContext';
+import Swal from 'sweetalert2';
 
 interface House {
   id: string;
@@ -19,6 +21,18 @@ interface House {
 
 export const Houses: React.FC = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    Swal.fire({
+      icon: 'success',
+      title: 'Đăng xuất thành công',
+      text: 'Hẹn gặp lại bạn!',
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  };
 
   // Collapsed Sidebar state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -143,6 +157,9 @@ export const Houses: React.FC = () => {
             </button>
             <button type="button" className="icon-btn" title="Lập lịch">
               <span className="material-symbols-outlined">schedule</span>
+            </button>
+            <button type="button" className="icon-btn" title="Đăng xuất" onClick={handleLogout}>
+              <span className="material-symbols-outlined">logout</span>
             </button>
             <img
               alt="User Avatar"

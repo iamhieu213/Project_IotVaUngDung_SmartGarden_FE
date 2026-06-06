@@ -1,8 +1,23 @@
 import React, { useState } from 'react';
 import Sidebar from '../Sidebar/Sidebar';
 import './HouseDetail.css';
+import { useAuth } from '../../context/AuthContext';
+import Swal from 'sweetalert2';
 
 export const HouseDetail: React.FC = () => {
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    Swal.fire({
+      icon: 'success',
+      title: 'Đăng xuất thành công',
+      text: 'Hẹn gặp lại bạn!',
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  };
+
   // Collapsed Sidebar state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -47,10 +62,11 @@ export const HouseDetail: React.FC = () => {
             </span>
           </div>
           <div className="header-right">
-            <div className="flex gap-4" style={{ display: 'flex', gap: '16px', color: 'var(--db-on-surface-variant)' }}>
+            <div className="flex gap-4" style={{ display: 'flex', gap: '16px', color: 'var(--db-on-surface-variant)', alignItems: 'center' }}>
               <span className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">notifications</span>
               <span className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">wifi_tethering</span>
               <span className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">schedule</span>
+              <span className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" title="Đăng xuất" onClick={handleLogout} style={{ cursor: 'pointer' }}>logout</span>
             </div>
             <img
               alt="User Avatar"

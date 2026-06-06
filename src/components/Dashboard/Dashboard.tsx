@@ -1,8 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../Sidebar/Sidebar';
 import './Dashboard.css';
+import { useAuth } from '../../context/AuthContext';
+import Swal from 'sweetalert2';
 
 export const Dashboard: React.FC = () => {
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    Swal.fire({
+      icon: 'success',
+      title: 'Đăng xuất thành công',
+      text: 'Hẹn gặp lại bạn!',
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  };
+
   // Collapsed Sidebar state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -78,6 +93,9 @@ export const Dashboard: React.FC = () => {
             </button>
             <button type="button" className="icon-btn" title="Lập lịch">
               <span className="material-symbols-outlined">schedule</span>
+            </button>
+            <button type="button" className="icon-btn" title="Đăng xuất" onClick={handleLogout}>
+              <span className="material-symbols-outlined">logout</span>
             </button>
             <img
               alt="User Avatar"
