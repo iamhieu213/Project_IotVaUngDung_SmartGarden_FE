@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../Sidebar/Sidebar';
 import './Houses.css';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
+import api from '../../utils/api';
 
 interface House {
   id: string;
@@ -34,6 +35,10 @@ export const Houses: React.FC = () => {
     });
   };
 
+  // State to hold houses from API
+  const [houses, setHouses] = useState<House[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
   // Collapsed Sidebar state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -41,57 +46,217 @@ export const Houses: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'ACTIVE' | 'MAINTENANCE' | 'OFFLINE'>('ALL');
 
-  // Hardcoded Houses Data mapped from the HTML mockup with translations
-  const housesData: House[] = [
-    {
-      id: 'oyster',
-      name: 'Nhà nấm Sò Alpha',
-      width: 24,
-      height: 12,
-      deviceCount: 14,
-      status: 'ACTIVE',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA588jh4PVAdsely55yQmNcDdE9XZoNa2CkEIgGehBKik9Pd8eEtM5xHOmQnqUogRN9kLh_XGjcJhx-b-uXz9WfxIlGKwXBjOudm66IZfdn802sSDQFMsSvEX6eDxEF3xfvxakmM8bxtnfULfOvZoXqm-Uo5jhzY4gbvjjI_zhj4_bf7yHU-zm-8U2QH5mcbCpPeop5DTTJd70fJjsHSpjOZj2spH4pmcNuthFloeGcJMCsdUdubQStZjyd1bz651CkR9KiUTsjCR9H',
-      metricLabel: 'ĐỘ ẨM',
-      metricValue: '92.4%',
-      chartData: [60, 75, 90, 85, 95],
-      theme: 'primary',
-    },
-    {
-      id: 'shiitake',
-      name: 'Nhà nấm Hương Beta',
-      width: 18,
-      height: 10,
-      deviceCount: 8,
-      status: 'MAINTENANCE',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDhN5QXfcX8_9d7d38CMyu1X941u-0X3arEfCZSPGvoM_dRLwgxNS90a7murfyqxUzz62jCNz3lWa_5-e0iGhhBICCfywlcCxuuPTTs-7QcsGqpREOfvsNVJULPkxqbTuuoojkwHcKMlVoUkEi0ZYgvwX8Pbhi-PLGpefgpsiVqugwpMZBg6cvmqmF0jvlKypdv90efNAyuId8AnLmqYr-p7rZqMU9JOUecZAbVktxe0LC48xiVWxp5Hrtuw0XWL4ihvPzaHCFQSuwj',
-      metricLabel: 'NHIỆT ĐỘ',
-      metricValue: '18.2°C',
-      chartData: [40, 45, 50, 48, 52],
-      theme: 'tertiary',
-    },
-    {
-      id: 'lionsmane',
-      name: 'Phòng Lab nấm Hầu Thủ',
-      width: 12,
-      height: 8,
-      deviceCount: 22,
-      status: 'ACTIVE',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCetwf6VFb4_Yj7oeUcNr8exw0l2DNEAwUh7O2pXww-ehalPfXtva7TnbFW6DtyOTFbhW7yMIYqKJyeWzOem9i-PCnwrcDv57NfpJSSR7yz_coC3VuLUV5q7l9NZpRnn9YCrUBQn17-LY-YEofNZcg2S0GoVDWUs_77txTxK4n4OIm_oR5S8CN-dh7abZOgDfyblDWYJuDC4CI55bFY5Tv5Xn9jDqZ02y4EGlXM3-LYy7BeZ1jYRBXYBxN_e1SJ28T34lG11dWuhMzT',
-      metricLabel: 'NỒNG ĐỘ CO2',
-      metricValue: '640 ppm',
-      chartData: [30, 35, 40, 38, 42],
-      theme: 'primary',
-    },
-    {
-      id: 'nursery',
-      name: 'Trạm ươm giống 04',
-      width: 8,
-      height: 6,
-      deviceCount: 0,
-      status: 'OFFLINE',
-      theme: 'empty',
-    },
-  ];
+  // Fetch houses from backend
+  const fetchHouses = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/houses');
+      if (response.data.success) {
+        // Map backend response data to Frontend House interface
+        const mappedHouses: House[] = response.data.data.map((h: any) => ({
+          id: h.id,
+          name: h.name,
+          width: h.width || 0,
+          height: h.height || 0,
+          deviceCount: 0, // Device count can be updated when device integration is implemented
+          status: 'ACTIVE', // Default status for new houses
+          metricLabel: 'TRẠNG THÁI',
+          metricValue: 'SẴN SÀNG',
+          theme: 'primary',
+        }));
+        setHouses(mappedHouses);
+      }
+    } catch (err: any) {
+      console.error('Lỗi khi tải danh sách nhà nấm:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Lỗi tải dữ liệu',
+        text: err.response?.data?.message || 'Không thể lấy dữ liệu nhà nấm từ máy chủ.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHouses();
+  }, []);
+
+  // Handle adding new house
+  const handleAddHouse = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Thêm nhà nấm mới',
+      html: `
+        <style>
+          .swal-form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 10px 0;
+            font-family: 'Inter', sans-serif;
+          }
+          .swal-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .swal-form-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--db-on-surface-variant);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+          .swal-form-label .material-symbols-outlined {
+            font-size: 16px;
+            color: var(--db-primary);
+          }
+          .swal-form-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--db-outline-variant);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            background-color: var(--db-surface-container-low);
+            color: var(--db-on-surface);
+            transition: all 0.2s ease;
+          }
+          .swal-form-input:focus {
+            border-color: var(--db-primary);
+            background-color: var(--db-surface-container-lowest);
+            box-shadow: 0 0 0 3px rgba(0, 108, 73, 0.15);
+          }
+          .swal-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .custom-swal-popup {
+            border-radius: 16px !important;
+            background-color: var(--db-surface-container-lowest) !important;
+            border: 1px solid var(--db-outline-variant) !important;
+            padding: 24px !important;
+          }
+          .custom-swal-confirm-btn {
+            background-color: var(--db-primary) !important;
+            color: #ffffff !important;
+            border: none !important;
+            padding: 10px 24px !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            margin-left: 8px !important;
+            transition: all 0.2s ease !important;
+          }
+          .custom-swal-confirm-btn:hover {
+            opacity: 0.9 !important;
+          }
+          .custom-swal-cancel-btn {
+            background-color: transparent !important;
+            color: var(--db-on-surface-variant) !important;
+            border: 1px solid var(--db-outline-variant) !important;
+            padding: 10px 24px !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+          }
+          .custom-swal-cancel-btn:hover {
+            background-color: var(--db-surface-container-low) !important;
+          }
+        </style>
+        <div class="swal-form-container">
+          <div class="swal-form-group">
+            <label class="swal-form-label">
+              <span class="material-symbols-outlined">badge</span> Tên nhà nấm
+            </label>
+            <input id="swal-input-name" class="swal-form-input" placeholder="Ví dụ: Nhà nấm Sò Alpha">
+          </div>
+          <div class="swal-form-group">
+            <label class="swal-form-label">
+              <span class="material-symbols-outlined">location_on</span> Địa chỉ lắp đặt
+            </label>
+            <input id="swal-input-address" class="swal-form-input" placeholder="Ví dụ: Khu A, Trại Củ Chi, TP.HCM">
+          </div>
+          <div class="swal-form-grid">
+            <div class="swal-form-group">
+              <label class="swal-form-label">
+                <span class="material-symbols-outlined">straighten</span> Rộng (mét)
+              </label>
+              <input id="swal-input-width" type="number" class="swal-form-input" min="0" placeholder="Ví dụ: 12">
+            </div>
+            <div class="swal-form-group">
+              <label class="swal-form-label">
+                <span class="material-symbols-outlined">straighten</span> Dài (mét)
+              </label>
+              <input id="swal-input-height" type="number" class="swal-form-input" min="0" placeholder="Ví dụ: 24">
+            </div>
+          </div>
+        </div>
+      `,
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm-btn',
+        cancelButton: 'custom-swal-cancel-btn',
+      },
+      buttonsStyling: false,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Tạo mới',
+      cancelButtonText: 'Hủy',
+      preConfirm: () => {
+        const name = (document.getElementById('swal-input-name') as HTMLInputElement).value;
+        const address = (document.getElementById('swal-input-address') as HTMLInputElement).value;
+        const width = (document.getElementById('swal-input-width') as HTMLInputElement).value;
+        const height = (document.getElementById('swal-input-height') as HTMLInputElement).value;
+
+        if (!name || !address) {
+          Swal.showValidationMessage('Vui lòng nhập đầy đủ tên và địa chỉ nhà nấm');
+          return false;
+        }
+        return {
+          name,
+          address,
+          width: Number(width) || 0,
+          height: Number(height) || 0,
+        };
+      },
+    });
+
+    if (formValues) {
+      try {
+        const response = await api.post('/houses/create', formValues);
+        if (response.data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Thành công',
+            text: 'Đã tạo nhà nấm mới thành công!',
+            timer: 1500,
+            showConfirmButton: false,
+          });
+          fetchHouses();
+        }
+      } catch (err: any) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Lỗi',
+          text: err.response?.data?.message || 'Có lỗi xảy ra khi tạo nhà nấm mới.',
+        });
+      }
+    }
+  };
 
   // Dynamic 3D tilt micro-interaction on mouse move
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -115,7 +280,7 @@ export const Houses: React.FC = () => {
   };
 
   // Filter & Search Logic
-  const filteredHouses = housesData.filter((house) => {
+  const filteredHouses = houses.filter((house) => {
     const matchesSearch = house.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter =
       activeFilter === 'ALL' ||
@@ -188,7 +353,7 @@ export const Houses: React.FC = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <button type="button" className="add-house-btn">
+              <button type="button" className="add-house-btn" onClick={handleAddHouse}>
                 <span className="material-symbols-outlined">add</span>
                 Thêm nhà nấm
               </button>
@@ -202,28 +367,28 @@ export const Houses: React.FC = () => {
               className={`filter-btn ${activeFilter === 'ALL' ? 'active' : 'inactive'}`}
               onClick={() => setActiveFilter('ALL')}
             >
-              Tất cả (12)
+              Tất cả ({houses.length})
             </button>
             <button
               type="button"
               className={`filter-btn ${activeFilter === 'ACTIVE' ? 'active' : 'inactive'}`}
               onClick={() => setActiveFilter('ACTIVE')}
             >
-              Đang hoạt động (8)
+              Đang hoạt động ({houses.filter((h) => h.status === 'ACTIVE').length})
             </button>
             <button
               type="button"
               className={`filter-btn ${activeFilter === 'MAINTENANCE' ? 'active' : 'inactive'}`}
               onClick={() => setActiveFilter('MAINTENANCE')}
             >
-              Bảo trì (3)
+              Bảo trì ({houses.filter((h) => h.status === 'MAINTENANCE').length})
             </button>
             <button
               type="button"
               className={`filter-btn ${activeFilter === 'OFFLINE' ? 'active' : 'inactive'}`}
               onClick={() => setActiveFilter('OFFLINE')}
             >
-              Ngoại tuyến (1)
+              Ngoại tuyến ({houses.filter((h) => h.status === 'OFFLINE').length})
             </button>
             <div style={{ width: '1px', backgroundColor: 'var(--db-outline-variant)', height: '24px', margin: '0 8px' }}></div>
             <button type="button" className="filter-more-btn">
@@ -347,7 +512,7 @@ export const Houses: React.FC = () => {
 
           {/* Pagination Row */}
           <div className="houses-pagination">
-            <p>Hiển thị {filteredHouses.length} trên 12 Nhà nấm</p>
+            <p>Hiển thị {filteredHouses.length} trên {houses.length} Nhà nấm</p>
             <div className="pagination-btn-group">
               <button type="button" className="pagination-btn" disabled title="Trang trước">
                 <span className="material-symbols-outlined">chevron_left</span>
