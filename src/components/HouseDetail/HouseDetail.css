@@ -571,3 +571,93 @@
 .system-control-btn:active {
   transform: scale(0.98);
 }
+
+/* Custom SweetAlert2 styling */
+.custom-swal-popup {
+  border-radius: 16px !important;
+  background-color: var(--db-surface-container-lowest) !important;
+  border: 1px solid var(--db-outline-variant) !important;
+  padding: 24px !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.custom-swal-confirm-btn {
+  background-color: var(--db-primary) !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 10px 24px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  margin-left: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.custom-swal-confirm-btn:hover {
+  opacity: 0.9 !important;
+}
+
+.custom-swal-delete-btn {
+  background-color: var(--db-error, #ba1a1a) !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 10px 24px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  margin-left: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.custom-swal-delete-btn:hover {
+  opacity: 0.9 !important;
+}
+
+.custom-swal-cancel-btn {
+  background-color: transparent !important;
+  color: var(--db-on-surface-variant) !important;
+  border: 1px solid var(--db-outline-variant) !important;
+  padding: 10px 24px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.custom-swal-cancel-btn:hover {
+  background-color: var(--db-surface-container-low) !important;
+}
+
+/* Device Actions style adjustments */
+.device-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-delete-btn {
+  background: none;
+  border: none;
+  color: var(--db-on-surface-variant);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  opacity: 0; /* Hide by default, show on hover */
+  transition: all 0.2s ease;
+}
+
+.device-row:hover .device-delete-btn {
+  opacity: 1;
+  color: var(--db-error, #ba1a1a);
+}
+
+.device-delete-btn:hover {
+  background-color: rgba(186, 26, 26, 0.08) !important;
+  color: var(--db-error, #ba1a1a) !important;
+}
+
