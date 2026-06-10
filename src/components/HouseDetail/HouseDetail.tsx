@@ -5,6 +5,7 @@ import './HouseDetail.css';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 import api from '../../utils/api';
+import { io } from 'socket.io-client';
 
 export const HouseDetail: React.FC = () => {
   const { logout } = useAuth();
@@ -13,7 +14,6 @@ export const HouseDetail: React.FC = () => {
   const [houseName, setHouseName] = useState<string>('Đang tải...');
   const [houseInfo, setHouseInfo] = useState<any>(null);
   const [devices, setDevices] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
   const handleLogout = async () => {
     await logout();
@@ -54,11 +54,28 @@ export const HouseDetail: React.FC = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
       await Promise.all([fetchHouseDetail(), fetchDevices()]);
-      setLoading(false);
     };
     loadData();
+  }, [houseId]);
+
+  useEffect(() => {
+    //Ket noi toi Backend Socket.io
+    const socket = io('http://localhost:3000');
+
+    // Lắng nghe sự kiện cập nhật thiết bị
+    socket.on('device_update', (updatedDevice: any) => {
+      if (updatedDevice.house === houseId) {
+        setDevices((prevDevices) =>
+          prevDevices.map((d) => (d.id === updatedDevice.id ? updatedDevice : d))
+        );
+      }
+    });
+
+    // Ngắt kết nối khi chuyển trang
+    return () => {
+      socket.disconnect();
+    };
   }, [houseId]);
 
   // Handle registering a device
@@ -164,28 +181,21 @@ export const HouseDetail: React.FC = () => {
               <label class="swal-form-label">
                 <span class="material-symbols-outlined">wifi_find</span> Thiết bị phát hiện được
               </label>
-              ${
-                unregisteredList.length > 0
-                  ? `<select id="swal-input-device-id" class="swal-form-select">
+              ${unregisteredList.length > 0
+            ? `<select id="swal-input-device-id" class="swal-form-select">
                       ${selectOptions}
                      </select>`
-                  : `<input id="swal-input-device-id" class="swal-form-input" placeholder="Nhập mã thiết bị (deviceId/MAC)">
+            : `<input id="swal-input-device-id" class="swal-form-input" placeholder="Nhập mã thiết bị (deviceId/MAC)">
                      <div style="font-size: 11px; color: var(--db-on-surface-variant); margin-top: 4px;">
                        Không phát hiện thiết bị nào trong hàng chờ Redis. Bạn có thể tự nhập thủ công.
                      </div>`
-              }
+          }
             </div>
             <div class="swal-form-group">
               <label class="swal-form-label">
                 <span class="material-symbols-outlined">badge</span> Tên thiết bị
               </label>
               <input id="swal-input-name" class="swal-form-input" placeholder="Ví dụ: Cảm biến khu trung tâm">
-            </div>
-            <div class="swal-form-group">
-              <label class="swal-form-label">
-                <span class="material-symbols-outlined">key</span> ThingsBoard Access Token
-              </label>
-              <input id="swal-input-tb-token" class="swal-form-input" placeholder="Nhập token kết nối ThingsBoard (không bắt buộc)">
             </div>
           </div>
         `,
@@ -202,7 +212,6 @@ export const HouseDetail: React.FC = () => {
         preConfirm: () => {
           const deviceId = (document.getElementById('swal-input-device-id') as HTMLInputElement | HTMLSelectElement).value;
           const name = (document.getElementById('swal-input-name') as HTMLInputElement).value;
-          const thingsboardAccessToken = (document.getElementById('swal-input-tb-token') as HTMLInputElement).value;
 
           if (!deviceId || !name) {
             Swal.showValidationMessage('Vui lòng chọn/nhập mã thiết bị và tên thiết bị');
@@ -212,7 +221,6 @@ export const HouseDetail: React.FC = () => {
             deviceId,
             name,
             houseId,
-            thingsboardAccessToken: thingsboardAccessToken || undefined,
           };
         },
       });
@@ -240,6 +248,46 @@ export const HouseDetail: React.FC = () => {
       }
     } catch (err) {
       console.error('Lỗi khi lấy danh sách thiết bị chưa đăng ký:', err);
+    }
+  };
+
+  const handleDeleteDevice = async (id: string, name: string) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Xóa thiết bị?',
+        text: `Bạn có chắc chắn muốn xóa thiết bị "${name}" khỏi nhà nấm này? Thao tác này cũng sẽ xóa token và dữ liệu liên quan.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Có, xóa ngay!',
+        cancelButtonText: 'Hủy',
+        customClass: {
+          popup: 'custom-swal-popup',
+          confirmButton: 'custom-swal-delete-btn',
+          cancelButton: 'custom-swal-cancel-btn',
+        },
+        buttonsStyling: false,
+      });
+
+      if (result.isConfirmed) {
+        const response = await api.delete(`/devices/${id}`);
+        if (response.data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Đã xóa',
+            text: 'Thiết bị đã được xóa thành công khỏi nhà nấm!',
+            timer: 1500,
+            showConfirmButton: false,
+          });
+          fetchDevices();
+        }
+      }
+    } catch (err: any) {
+      console.error('Lỗi khi xóa thiết bị:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Lỗi',
+        text: err.response?.data?.message || 'Có lỗi xảy ra khi xóa thiết bị.',
+      });
     }
   };
 
@@ -415,75 +463,75 @@ export const HouseDetail: React.FC = () => {
               <div style={{ position: 'absolute', inset: 0, border: '1px dashed rgba(108, 122, 113, 0.3)' }}></div>
               <div className="axis-label-x" style={{ transform: 'rotateZ(45deg) rotateX(-60deg) translateY(30px) translateX(-50px)', color: 'var(--db-error)', fontWeight: 'bold' }}>200 m</div>
               <div className="axis-label-y" style={{ transform: 'rotateZ(45deg) rotateX(-60deg) translateX(30px) translateY(-50px)', color: 'var(--db-error)', fontWeight: 'bold' }}>250 m</div>
-              
+
               {/* Zones Grid */}
               <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 48px 1fr 1fr', gap: '8px' }}>
-                 {/* Zone 1 */}
-                 <div className="farm-zone">
-                   {showSensors && (
-                     <div className="isometric-card" style={{ position: 'absolute', top: '20%', left: '30%' }}>
-                       <div className="floating-3d-card">
-                         <span className={`status-dot ${averageTemperature !== null ? 'active' : 'error animate-pulse'}`}></span>
-                         <span className="material-symbols-outlined text-primary">thermostat</span>
-                         <span className="card-lbl" style={{ whiteSpace: 'nowrap' }}>
-                           {averageTemperature !== null ? `${averageTemperature}°C` : 'NHIỆT ĐỘ'}
-                         </span>
-                       </div>
-                     </div>
-                   )}
-                 </div>
- 
-                 {/* Zone 2 */}
-                 <div className="farm-zone"></div>
- 
-                 {/* Path/Road */}
-                 <div className="path-road"></div>
- 
-                 {/* Zone 3 */}
-                 <div className="farm-zone">
-                   {showSensors && (
-                     <div className="isometric-card" style={{ position: 'absolute', top: '40%', left: '50%' }}>
-                       <div className={`floating-3d-card ${averageHumidity !== null ? '' : 'alert-border'}`}>
-                         <span className={`status-dot ${averageHumidity !== null ? 'active' : 'error animate-pulse'}`}></span>
-                         <span className="material-symbols-outlined text-error">humidity_percentage</span>
-                         <span className="card-lbl" style={{ color: averageHumidity !== null ? 'inherit' : 'var(--db-error)', whiteSpace: 'nowrap' }}>
-                           {averageHumidity !== null ? `${averageHumidity}%` : 'ĐỘ ẨM'}
-                         </span>
-                       </div>
-                     </div>
-                   )}
-                 </div>
- 
-                 {/* Zone 4 */}
-                 <div className="farm-zone">
-                   {showSensors && (
-                     <div className="isometric-card" style={{ position: 'absolute', top: '10%', left: '70%' }}>
-                       <div className="floating-3d-card">
-                         <span className="status-dot active"></span>
-                         <span className="material-symbols-outlined text-secondary">co2</span>
-                         <span className="card-lbl">CO2</span>
-                       </div>
-                     </div>
-                   )}
-                 </div>
- 
-                 {/* Zone 5 */}
-                 <div className="farm-zone">
-                   {showSensors && (
-                     <div className="isometric-card" style={{ position: 'absolute', top: '50%', left: '20%' }}>
-                       <div className="floating-3d-card">
-                         <span className={`status-dot ${averageLight !== null ? 'active' : 'error animate-pulse'}`}></span>
-                         <span className="material-symbols-outlined text-primary">wb_sunny</span>
-                         <span className="card-lbl" style={{ whiteSpace: 'nowrap' }}>
-                           {averageLight !== null ? `${averageLight} lx` : 'ÁNH SÁNG'}
-                         </span>
-                       </div>
-                     </div>
-                   )}
-                 </div>
- 
-                 {/* Zone 6 */}
-                 <div className="farm-zone"></div>
+                {/* Zone 1 */}
+                <div className="farm-zone">
+                  {showSensors && (
+                    <div className="isometric-card" style={{ position: 'absolute', top: '20%', left: '30%' }}>
+                      <div className="floating-3d-card">
+                        <span className={`status-dot ${averageTemperature !== null ? 'active' : 'error animate-pulse'}`}></span>
+                        <span className="material-symbols-outlined text-primary">thermostat</span>
+                        <span className="card-lbl" style={{ whiteSpace: 'nowrap' }}>
+                          {averageTemperature !== null ? `${averageTemperature}°C` : 'NHIỆT ĐỘ'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Zone 2 */}
+                <div className="farm-zone"></div>
+
+                {/* Path/Road */}
+                <div className="path-road"></div>
+
+                {/* Zone 3 */}
+                <div className="farm-zone">
+                  {showSensors && (
+                    <div className="isometric-card" style={{ position: 'absolute', top: '40%', left: '50%' }}>
+                      <div className={`floating-3d-card ${averageHumidity !== null ? '' : 'alert-border'}`}>
+                        <span className={`status-dot ${averageHumidity !== null ? 'active' : 'error animate-pulse'}`}></span>
+                        <span className="material-symbols-outlined text-error">humidity_percentage</span>
+                        <span className="card-lbl" style={{ color: averageHumidity !== null ? 'inherit' : 'var(--db-error)', whiteSpace: 'nowrap' }}>
+                          {averageHumidity !== null ? `${averageHumidity}%` : 'ĐỘ ẨM'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Zone 4 */}
+                <div className="farm-zone">
+                  {showSensors && (
+                    <div className="isometric-card" style={{ position: 'absolute', top: '10%', left: '70%' }}>
+                      <div className="floating-3d-card">
+                        <span className="status-dot active"></span>
+                        <span className="material-symbols-outlined text-secondary">co2</span>
+                        <span className="card-lbl">CO2</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Zone 5 */}
+                <div className="farm-zone">
+                  {showSensors && (
+                    <div className="isometric-card" style={{ position: 'absolute', top: '50%', left: '20%' }}>
+                      <div className="floating-3d-card">
+                        <span className={`status-dot ${averageLight !== null ? 'active' : 'error animate-pulse'}`}></span>
+                        <span className="material-symbols-outlined text-primary">wb_sunny</span>
+                        <span className="card-lbl" style={{ whiteSpace: 'nowrap' }}>
+                          {averageLight !== null ? `${averageLight} lx` : 'ÁNH SÁNG'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Zone 6 */}
+                <div className="farm-zone"></div>
               </div>
 
               {/* Central Control Post */}
@@ -592,15 +640,28 @@ export const HouseDetail: React.FC = () => {
                             </div>
                             <div className="device-details">ID: {device.deviceId} | {lastSeenStr}</div>
                           </div>
-                          {isOnline ? (
-                            <span className="material-symbols-outlined device-arrow" style={{ fontSize: '20px' }}>
-                              chevron_right
-                            </span>
-                          ) : (
-                            <span className="material-symbols-outlined text-error" style={{ fontSize: '20px' }}>
-                              error
-                            </span>
-                          )}
+                          <div className="device-actions">
+                            <button
+                              type="button"
+                              className="device-delete-btn"
+                              title="Xóa thiết bị"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteDevice(device.id, device.name);
+                              }}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>delete</span>
+                            </button>
+                            {isOnline ? (
+                              <span className="material-symbols-outlined device-arrow" style={{ fontSize: '20px' }}>
+                                chevron_right
+                              </span>
+                            ) : (
+                              <span className="material-symbols-outlined text-error" style={{ fontSize: '20px' }}>
+                                error
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

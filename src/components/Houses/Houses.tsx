@@ -37,7 +37,6 @@ export const Houses: React.FC = () => {
 
   // State to hold houses from API
   const [houses, setHouses] = useState<House[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
   // Collapsed Sidebar state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -49,7 +48,6 @@ export const Houses: React.FC = () => {
   // Fetch houses from backend
   const fetchHouses = async () => {
     try {
-      setLoading(true);
       const response = await api.get('/houses');
       if (response.data.success) {
         // Map backend response data to Frontend House interface
@@ -73,8 +71,6 @@ export const Houses: React.FC = () => {
         title: 'Lỗi tải dữ liệu',
         text: err.response?.data?.message || 'Không thể lấy dữ liệu nhà nấm từ máy chủ.',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
