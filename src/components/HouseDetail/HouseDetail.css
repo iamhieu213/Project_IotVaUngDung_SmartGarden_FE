@@ -81,52 +81,91 @@
 
 .status-dot {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 12px;
-  height: 12px;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  box-shadow: 0 0 8px currentColor;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 10;
 }
 
 .status-dot.active {
-  background-color: var(--db-primary-container);
-  color: var(--db-primary-container);
+  background-color: #10b981;
 }
 
 .status-dot.error {
-  background-color: var(--db-error);
-  color: var(--db-error);
+  background-color: #ef4444;
 }
 
 /* Floating 3D Cards */
 .floating-3d-card {
-  width: 48px;
-  height: 64px;
+  width: 56px;
+  height: 76px;
   background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--db-outline-variant);
-  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border: 2px solid var(--db-outline-variant);
+  padding: 10px 4px 6px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  position: absolute;
+  justify-content: space-between;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
 }
 
 .floating-3d-card.alert-border {
-  border-color: var(--db-error);
+  border-color: #ef4444 !important;
 }
 
-.floating-3d-card span {
-  font-size: 24px;
+.floating-3d-card span.material-symbols-outlined {
+  font-size: 26px;
+  line-height: 1;
 }
 
 .floating-3d-card .card-lbl {
   font-size: 8px;
   font-weight: 700;
-  margin-top: 4px;
+  margin-top: 2px;
+  width: 100%;
+  text-align: center;
+}
+
+/* Color themes for different sensors (matching image reference) */
+.floating-3d-card.theme-temperature {
+  background-color: #fee2e2; /* Red-100 */
+  border-color: #f87171;     /* Red-400 */
+}
+.floating-3d-card.theme-temperature span.material-symbols-outlined {
+  color: #ef4444;            /* Red-500 */
+}
+
+.floating-3d-card.theme-humidity {
+  background-color: #eff6ff;    /* Blue-50 */
+  border-color: #60a5fa;        /* Blue-400 */
+}
+.floating-3d-card.theme-humidity span.material-symbols-outlined {
+  color: #3b82f6;               /* Blue-500 */
+}
+
+.floating-3d-card.theme-soilMoisture {
+  background-color: #e0e7ff; /* Indigo-50 */
+  border-color: #818cf8;     /* Indigo-400 */
+}
+.floating-3d-card.theme-soilMoisture span.material-symbols-outlined {
+  color: #4f46e5;            /* Indigo-600 */
+}
+
+.floating-3d-card.theme-lightIntensity {
+  background-color: #fffbeb; /* Amber-50 */
+  border-color: #fbbf24;     /* Amber-400 */
+}
+.floating-3d-card.theme-lightIntensity span.material-symbols-outlined {
+  color: #d97706;            /* Amber-600 */
 }
 
 /* Central Control Post */

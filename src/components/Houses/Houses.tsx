@@ -49,22 +49,39 @@ export const Houses: React.FC = () => {
   const fetchHouses = async () => {
     try {
       const response = await api.get('/houses');
-      if (response.data.success) {
-        // Map backend response data to Frontend House interface
-        const mappedHouses: House[] = response.data.data.map((h: any) => ({
-          id: h.id,
-          name: h.name,
-          width: h.width || 0,
-          height: h.height || 0,
-          deviceCount: 0, // Device count can be updated when device integration is implemented
-          status: 'ACTIVE', // Default status for new houses
-          metricLabel: 'TRẠNG THÁI',
-          metricValue: 'SẴN SÀNG',
-          theme: 'primary',
-        }));
+      if(response.data.success) {
+        const houseData = response.data.data;
+
+        //Goi API lay thiet bi cua tung nha nha nam song song
+        const mappedHouses: House[] = await Promise.all(
+          houseData.map(async (h : any) => {
+            let deviceCount = 0;
+            try {
+              const deviceRes = await api.get(`/devices/house/${h.id}`);
+              if (deviceRes.data.success) {
+                deviceCount = deviceRes.data.data.length; // Số lượng thiết bị
+              }
+            }catch(deviceErr) {
+              console.error(`Lỗi khi tải thiết bị cho nhà nấm ${h.id}:`, deviceErr);
+            }
+
+            return {
+              id: h.id,
+              name: h.name,
+              width: h.width || 0,
+              height : h.height || 0,
+              deviceCount : deviceCount,
+              status : 'ACTIVE',
+              metricLabel: 'TRẠNG THÁI',
+              metricValue: 'SẴN SÀNG',
+              theme: 'primary',
+            }
+          })
+        );
         setHouses(mappedHouses);
       }
-    } catch (err: any) {
+
+    }catch(err: any) {
       console.error('Lỗi khi tải danh sách nhà nấm:', err);
       Swal.fire({
         icon: 'error',
@@ -72,7 +89,7 @@ export const Houses: React.FC = () => {
         text: err.response?.data?.message || 'Không thể lấy dữ liệu nhà nấm từ máy chủ.',
       });
     }
-  };
+  }
 
   useEffect(() => {
     fetchHouses();
