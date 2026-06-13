@@ -12,6 +12,8 @@ interface RightStatusPanelProps {
   handleSensorDoubleClick: (e: React.MouseEvent | null, deviceId: string, sensorKey: string, currentName: string, spaceX: number, spaceY: number) => void;
   handleAddDevice: () => void;
   getSensorLucideIcon: (sensorKey: string) => React.ReactNode;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
@@ -25,9 +27,22 @@ export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
   handleSensorDoubleClick,
   handleAddDevice,
   getSensorLucideIcon,
+  isCollapsed,
+  onToggleCollapse,
 }) => {
   return (
-    <aside className="status-panel">
+    <aside className={`status-panel ${isCollapsed ? 'collapsed' : ''}`}>
+      {/* Toggle Button */}
+      <button
+        type="button"
+        className="status-panel-toggle-btn"
+        onClick={onToggleCollapse}
+        title={isCollapsed ? "Mở danh sách thiết bị" : "Thu gọn danh sách thiết bị"}
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          {isCollapsed ? 'chevron_left' : 'chevron_right'}
+        </span>
+      </button>
       {/* Device Registry list */}
       <div className="registry-list-section custom-scrollbar">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

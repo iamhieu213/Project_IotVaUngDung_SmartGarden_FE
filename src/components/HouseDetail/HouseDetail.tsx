@@ -2,11 +2,12 @@ import React from 'react';
 import Sidebar from '../Sidebar/Sidebar';
 import './HouseDetail.css';
 import { Thermometer, Droplets, Sun, HelpCircle } from 'lucide-react';
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router-dom';
+import { NotificationDropdown } from '../NotificationDropdown/NotificationDropdown';
+import { useAuth } from '../../context/AuthContext';
 // Import sub-components
 import { SensorStatsBar } from './SensorStatsBar';
 import { FarmHudControls } from './FarmHudControls';
-import { FarmMapLegend } from './FarmMapLegend';
 import { SensorCard } from './SensorCard';
 import { RightStatusPanel } from './RightStatusPanel';
 
@@ -30,6 +31,7 @@ const getSensorLucideIcon = (sensorKey: string) => {
 };
 
 export const HouseDetail: React.FC = () => {
+  const { user } = useAuth();
   const {
     houseName,
     houseInfo,
@@ -41,9 +43,7 @@ export const HouseDetail: React.FC = () => {
     zoom,
     rotation,
     showSensors,
-    setShowSensors,
     show3dOverlay,
-    setShow3dOverlay,
     isPlacementMode,
     selectedDeviceForPlacement,
     mapRef,
@@ -67,6 +67,8 @@ export const HouseDetail: React.FC = () => {
     activeCount,
     inactiveCount,
     isFlatView,
+    isStatusPanelCollapsed,
+    setIsStatusPanelCollapsed,
   } = useHouseDetailState();
 
   return (
@@ -94,17 +96,31 @@ export const HouseDetail: React.FC = () => {
             </span>
           </div>
           <div className="header-right">
-            <div className="flex gap-4" style={{ display: 'flex', gap: '16px', color: 'var(--db-on-surface-variant)', alignItems: 'center' }}>
-              <span className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">notifications</span>
-              <span className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">wifi_tethering</span>
-              <span className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">schedule</span>
-              <span className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" title="Đăng xuất" onClick={handleLogout} style={{ cursor: 'pointer' }}>logout</span>
+            <div className="header-right-links">
+              <button type="button" className="header-link-item" title="Trợ giúp">
+                <span className="material-symbols-outlined header-link-icon">help_outline</span>
+                Trợ giúp
+              </button>
+              <button type="button" className="header-link-item" title="Góp ý">
+                <span className="material-symbols-outlined header-link-icon">favorite_border</span>
+                Góp ý
+              </button>
+              <NotificationDropdown />
+              <button type="button" className="header-link-item" title="Đăng xuất" onClick={handleLogout}>
+                <span className="material-symbols-outlined header-link-icon">logout</span>
+              </button>
             </div>
-            <img
-              alt="User Avatar"
-              className="user-avatar"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeTg-x7fx4RwQxmgdWEgGLIMLVMsShv9zcEwTBcef1HSDjQB-OaWQXOxpJYXPsq7KuXxle8bA7fz-nWGKDHOCHP_UVWPOLIFUknw110qE8Ko0LWtl9_7hjQMB81IuJnwlyl6-9DK88Lqc4ikWu5VUTwsoX9lccdwTdMc_JfaIR7d45to0I2B7cGuQQ-2HHwlqdTrR_JtwNFV0kr8QesCIsiQbRmEv2yL2qAgVcdb4-VURcm4Wrt2CTceBJF90xeKxirw4rjx0FaULo"
-            />
+
+            {/* Profile Widget */}
+            <div className="user-profile-widget">
+              <div className="user-avatar-initials">
+                {user?.username ? user.username.charAt(0).toUpperCase() : 'N'}
+              </div>
+              <div className="user-profile-info">
+                <span className="user-profile-name">{user?.username || 'Nguyễn Phương Nam'}</span>
+                <span className="user-profile-role">Nhân viên</span>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -131,13 +147,6 @@ export const HouseDetail: React.FC = () => {
               handleRotate={handleRotate}
             />
 
-            {/* Map Legend / Filters */}
-            <FarmMapLegend
-              showSensors={showSensors}
-              setShowSensors={setShowSensors}
-              show3dOverlay={show3dOverlay}
-              setShow3dOverlay={setShow3dOverlay}
-            />
 
             {/* 3D Base Layout */}
             <div
@@ -256,6 +265,8 @@ export const HouseDetail: React.FC = () => {
             handleSensorDoubleClick={handleSensorDoubleClick}
             handleAddDevice={handleAddDevice}
             getSensorLucideIcon={getSensorLucideIcon}
+            isCollapsed={isStatusPanelCollapsed}
+            onToggleCollapse={() => setIsStatusPanelCollapsed(!isStatusPanelCollapsed)}
           />
         </div>
       </main>
