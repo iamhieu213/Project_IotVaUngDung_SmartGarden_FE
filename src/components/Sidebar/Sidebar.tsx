@@ -1,8 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
-import { useAuth } from '../../context/AuthContext';
-import Swal from 'sweetalert2';
 
 export interface SidebarItem {
   id: string;
@@ -24,18 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed = false,
   onToggleCollapse,
 }) => {
-  const { logout } = useAuth();
-
-  const handleLogout = async () => {
-    await logout();
-    Swal.fire({
-      icon: 'success',
-      title: 'Đăng xuất thành công',
-      text: 'Hẹn gặp lại bạn!',
-      timer: 1500,
-      showConfirmButton: false,
-    });
-  };
+  
   const mainItems: SidebarItem[] = [
     { id: 'dashboard', label: 'Tổng quan', icon: 'dashboard', path: '/dashboard' },
     { id: 'mushroom-houses', label: 'Nhà nấm', icon: 'home_work', path: '/houses' },
@@ -44,10 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'alerts', label: 'Cảnh báo', icon: 'notifications_active', path: '/alerts' },
   ];
 
-  const settingItems: SidebarItem[] = [
-    { id: 'settings', label: 'Cài đặt', icon: 'settings', path: '/settings' },
-    { id: 'profile', label: 'Hồ sơ cá nhân', icon: 'account_circle', path: '/profile' },
-  ];
+  
 
   const renderItem = (item: SidebarItem) => {
     const isSelected = activeId === item.id;
@@ -117,19 +101,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <nav className="sidebar-nav">
         {mainItems.map(renderItem)}
         <div className="sidebar-divider"></div>
-        {settingItems.map(renderItem)}
-        <div className="sidebar-divider"></div>
-        <button
-          type="button"
-          className="sidebar-link logout-btn"
-          onClick={handleLogout}
-          title={isCollapsed ? "Đăng xuất" : undefined}
-        >
-          <span className="material-symbols-outlined sidebar-item-icon logout-icon">
-            logout
-          </span>
-          {!isCollapsed && <span className="sidebar-item-label">Đăng xuất</span>}
-        </button>
       </nav>
 
       {/* System Status Footer Card */}

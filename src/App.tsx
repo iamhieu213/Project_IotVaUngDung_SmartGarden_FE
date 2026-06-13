@@ -6,11 +6,15 @@ import { Dashboard } from './components/Dashboard/Dashboard';
 import { Houses } from './components/Houses/Houses';
 import { HouseDetail } from './components/HouseDetail/HouseDetail';
 import { Devices } from './components/Devices/Devices';
+import { Alerts } from './components/Alerts/Alerts';
 import { ForgotPassword } from './components/ForgotPassword/ForgotPassword';
 import { ResetPassword } from './components/ResetPassword/ResetPassword';
+import { Analytics } from './components/Analytics/Analytics';
+
 
 // Import AuthProvider và ProtectedRoute
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -18,48 +22,67 @@ function App() {
 
   return (
     <AuthProvider>
-      <Routes>
-        {/* Các Route công khai (Public) */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login onLoginSuccess={() => navigate('/dashboard')} />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+      <NotificationProvider>
+        <Routes>
+          {/* Các Route công khai (Public) */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login onLoginSuccess={() => navigate('/dashboard')} />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Các Route được bảo vệ (Protected) */}
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/houses" 
-          element={
-            <ProtectedRoute>
-              <Houses />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/houses/:id" 
-          element={
-            <ProtectedRoute>
-              <HouseDetail />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/devices" 
-          element={
-            <ProtectedRoute>
-              <Devices />
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
+          {/* Các Route được bảo vệ (Protected) */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/houses" 
+            element={
+              <ProtectedRoute>
+                <Houses />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/houses/:id" 
+            element={
+              <ProtectedRoute>
+                <HouseDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/devices" 
+            element={
+              <ProtectedRoute>
+                <Devices />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/analytics" 
+            element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/alerts" 
+            element={
+              <ProtectedRoute>
+                <Alerts />
+              </ProtectedRoute>
+            } 
+          />
+
+        </Routes>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

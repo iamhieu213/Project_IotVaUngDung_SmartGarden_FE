@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../Sidebar/Sidebar';
 import './Houses.css';
-import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 import api from '../../utils/api';
 
@@ -22,18 +21,7 @@ interface House {
 
 export const Houses: React.FC = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
 
-  const handleLogout = async () => {
-    await logout();
-    Swal.fire({
-      icon: 'success',
-      title: 'Đăng xuất thành công',
-      text: 'Hẹn gặp lại bạn!',
-      timer: 1500,
-      showConfirmButton: false,
-    });
-  };
 
   // State to hold houses from API
   const [houses, setHouses] = useState<House[]>([]);
@@ -54,7 +42,7 @@ export const Houses: React.FC = () => {
 
         //Goi API lay thiet bi cua tung nha nha nam song song
         const mappedHouses: House[] = await Promise.all(
-          houseData.map(async (h : any) => {
+          houseData.map(async (h : any, index: number) => {
             let deviceCount = 0;
             try {
               const deviceRes = await api.get(`/devices/house/${h.id}`);
@@ -65,6 +53,11 @@ export const Houses: React.FC = () => {
               console.error(`Lỗi khi tải thiết bị cho nhà nấm ${h.id}:`, deviceErr);
             }
 
+            const MUSHROOM_HOUSE_IMAGES = [
+              '/mushroom_house_1.png',
+              '/mushroom_house_2.png',
+            ];
+
             return {
               id: h.id,
               name: h.name,
@@ -72,9 +65,11 @@ export const Houses: React.FC = () => {
               height : h.height || 0,
               deviceCount : deviceCount,
               status : 'ACTIVE',
+              imageUrl: h.imageUrl || MUSHROOM_HOUSE_IMAGES[index % MUSHROOM_HOUSE_IMAGES.length],
               metricLabel: 'TRẠNG THÁI',
               metricValue: 'SẴN SÀNG',
-              theme: 'primary',
+              chartData: [45, 60, 85, 50, 75, 90, 65],
+              theme: (index % 2 === 0) ? 'primary' : 'tertiary',
             }
           })
         );
@@ -315,38 +310,6 @@ export const Houses: React.FC = () => {
 
       {/* Main Content */}
       <main className="dashboard-main">
-        {/* Top Navigation Bar */}
-        <header className="dashboard-header">
-          <div className="header-left">
-            <nav className="header-zones">
-              <span className="zone-tab inactive">Nhà nấm A</span>
-              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--db-outline-variant)' }}>
-                chevron_right
-              </span>
-              <span className="zone-tab active">Khu vực 1</span>
-            </nav>
-          </div>
-          <div className="header-right">
-            <button type="button" className="icon-btn" title="Thông báo">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <button type="button" className="icon-btn" title="Kết nối mạng">
-              <span className="material-symbols-outlined">wifi_tethering</span>
-            </button>
-            <button type="button" className="icon-btn" title="Lập lịch">
-              <span className="material-symbols-outlined">schedule</span>
-            </button>
-            <button type="button" className="icon-btn" title="Đăng xuất" onClick={handleLogout}>
-              <span className="material-symbols-outlined">logout</span>
-            </button>
-            <img
-              alt="User Avatar"
-              className="user-avatar"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgHA_qU8Cc0gNeTIxCPo9ezJFPN3z5QcexsINbKwdKqX_VrKzM9u9z0vRauJQFAv_4YJkwoHbsGjNScOWDjw4GQtuSuqB1D8jR9sOUi2JyyvcVAcAMQhrNl5Xo8ot_hb_BaT80jzniC1_mx9CeUegn9zpE1LB4mrWOr05kTr43CRMe4nNMSV03qnO8LI-S8gj-B8QEyI5SQ_RgpUzMHCUTx_fLDXBaG-J-5Y9c1wIInBwCxx-rwCkhrKTpJx13CsGBdrqpOD2jU4AM"
-            />
-          </div>
-        </header>
-
         {/* Workspace Content */}
         <div className="dashboard-content">
           {/* Header & Actions Row */}

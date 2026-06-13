@@ -24,6 +24,8 @@ export const useHouseDetailState = () => {
 
   // Collapsed Sidebar state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Collapsed Right Status Panel state
+  const [isStatusPanelCollapsed, setIsStatusPanelCollapsed] = useState(false);
 
   // HUD & Isometric state
   const [zoom, setZoom] = useState(1.0);
@@ -103,7 +105,7 @@ export const useHouseDetailState = () => {
               const sensorNames = newlyDetectedSensors.join(', ');
               Swal.fire({
                 icon: 'info',
-                title: 'Phát hiện cảm biến mới!',
+                title: 'Phát hiện cảm biến mới',
                 text: `Thiết bị "${updatedDevice.name}" vừa cắm thêm cảm biến: ${sensorNames}. Hãy mở danh sách bên phải để kéo thả!`,
                 toast: true,
                 position: 'top-end',
@@ -436,5 +438,7 @@ export const useHouseDetailState = () => {
     isFlatView,
     averageHumidity,
     averageTemperature,
+    isStatusPanelCollapsed,
+    setIsStatusPanelCollapsed,
   };
 };

@@ -320,12 +320,50 @@
 
 /* Right Side Status Panel */
 .status-panel {
+  position: relative;
   width: 384px;
   background-color: #ffffff;
   border-left: 1px solid var(--db-outline-variant);
   display: flex;
   flex-direction: column;
   z-index: 40;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-left 0.3s ease;
+}
+
+.status-panel.collapsed {
+  width: 0;
+  border-left: none;
+}
+
+.status-panel-toggle-btn {
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background-color: #ffffff;
+  border: 1px solid var(--db-outline-variant);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  color: var(--db-on-surface-variant);
+  box-shadow: -2px 4px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.status-panel-toggle-btn:hover {
+  color: var(--db-primary);
+  background-color: var(--db-surface-container-low);
+}
+
+.status-panel.collapsed > *:not(.status-panel-toggle-btn) {
+  display: none !important;
 }
 
 .status-panel-section {
