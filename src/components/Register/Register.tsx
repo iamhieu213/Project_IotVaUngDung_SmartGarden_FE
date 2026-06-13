@@ -1,106 +1,32 @@
 // src/components/Register/Register.tsx
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import './Register.css';
-import api from '../../utils/api';
-import Swal from 'sweetalert2';
+import { useRegister } from '../../hooks/useRegister';
 
 interface RegisterProps {
   onRegisterSuccess?: () => void;
 }
 
 export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
-  const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
-
-  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const button = e.currentTarget;
-    const rect = button.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const newRipple = { id: Date.now(), x, y };
-
-    setRipples((prev) => [...prev, newRipple]);
-
-    setTimeout(() => {
-      setRipples((prev) => prev.filter((r) => r.id !== newRipple.id));
-    }, 700);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (status !== 'idle') return;
-
-    if (password !== confirmPassword) {
-      setErrorMsg('Mật khẩu xác nhận không trùng khớp.');
-      Swal.fire({
-        icon: 'warning',
-        title: 'Mật khẩu không khớp',
-        text: 'Vui lòng kiểm tra lại mật khẩu xác nhận.',
-        confirmButtonText: 'Đóng',
-      });
-      return;
-    }
-
-    if (!agreeTerms) {
-      setErrorMsg('Bạn phải đồng ý với Điều khoản và Chính sách.');
-      Swal.fire({
-        icon: 'warning',
-        title: 'Chưa đồng ý điều khoản',
-        text: 'Vui lòng tích chọn đồng ý điều khoản dịch vụ để tiếp tục.',
-        confirmButtonText: 'Đóng',
-      });
-      return;
-    }
-
-    setStatus('submitting');
-    setErrorMsg('');
-
-    try {
-      const response = await api.post('/auth/register', {
-        username,
-        email,
-        password
-      });
-
-      if (response.data.success) {
-        setStatus('success');
-        
-        await Swal.fire({
-          icon: 'success',
-          title: 'Đăng ký thành công',
-          text: 'Tài khoản của bạn đã được tạo thành công!',
-          timer: 1500,
-          showConfirmButton: false,
-        });
-
-        if (onRegisterSuccess) {
-          onRegisterSuccess();
-        } else {
-          navigate('/login');
-        }
-      }
-    } catch (err: any) {
-      setStatus('idle');
-      const message = err.response?.data?.message || 'Có lỗi xảy ra khi tạo tài khoản.';
-      setErrorMsg(message);
-      Swal.fire({
-        icon: 'error',
-        title: 'Đăng ký thất bại',
-        text: message,
-        confirmButtonText: 'Thử lại',
-      });
-    }
-  };
+  const {
+    username, setUsername,
+    email, setEmail,
+    password, setPassword,
+    confirmPassword, setConfirmPassword,
+    agreeTerms, setAgreeTerms,
+    isOtpStep, setIsOtpStep,
+    otpCode, setOtpCode,
+    resendCountdown,
+    status,
+    errorMsg,
+    focusedField, setFocusedField,
+    ripples,
+    handleButtonClick,
+    handleRegisterSubmit,
+    handleVerifyOtpSubmit,
+    handleResendOtp
+  } = useRegister(onRegisterSuccess);
 
   return (
     <div className="register-page-body">
@@ -112,7 +38,6 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
         </Link>
         {/* Left Side: Visual/Branding */}
         <section className="branding-section">
-          {/* Animated Background Pattern */}
           <div className="branding-bg-dots" />
           
           <div className="branding-content-wrapper">
@@ -141,7 +66,6 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
             </div>
           </div>
           
-          {/* Decorative blur elements */}
           <div className="glow-bottom-left" />
           <div className="glow-top-right" />
         </section>
@@ -158,172 +82,245 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
                 <span className="logo-text">Smart Garden</span>
               </div>
               <div className="header-texts">
-                <h2>Tạo tài khoản của bạn</h2>
-                <p>Bắt đầu tối ưu hóa năng suất nấm của bạn ngay hôm nay.</p>
+                <h2>{isOtpStep ? 'Xác thực tài khoản' : 'Tạo tài khoản của bạn'}</h2>
+                <p>
+                  {isOtpStep 
+                    ? `Nhập mã xác thực OTP 6 số đã được gửi tới Gmail: ${email}` 
+                    : 'Bắt đầu tối ưu hóa năng suất nấm của bạn ngay hôm nay.'}
+                </p>
               </div>
             </div>
 
-            {/* Registration Form */}
-            <form className="register-form" onSubmit={handleSubmit}>
-              
-              {/* Alert Error */}
-              {errorMsg && (
-                <div className="register-error-alert" style={{ color: '#ba1a1a', backgroundColor: '#ffdad6', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>error</span>
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
-              {/* Username */}
-              <div className="input-group">
-                <label className="input-label" htmlFor="username">
-                  Tên đăng nhập
-                </label>
-                <div className={`input-wrapper ${focusedField === 'username' ? 'scaled' : ''}`}>
-                  <span className="material-symbols-outlined input-icon">person</span>
-                  <input
-                    className="form-input"
-                    id="username"
-                    name="username"
-                    type="text"
-                    placeholder="johndoe"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    onFocus={() => setFocusedField('username')}
-                    onBlur={() => setFocusedField(null)}
-                    disabled={status !== 'idle'}
-                    autoComplete="username"
-                  />
-                </div>
+            {/* Alert Error */}
+            {errorMsg && (
+              <div className="register-error-alert" style={{ color: '#ba1a1a', backgroundColor: '#ffdad6', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>error</span>
+                <span>{errorMsg}</span>
               </div>
+            )}
 
-              {/* Email */}
-              <div className="input-group">
-                <label className="input-label" htmlFor="email">
-                  Địa chỉ Email
-                </label>
-                <div className={`input-wrapper ${focusedField === 'email' ? 'scaled' : ''}`}>
-                  <span className="material-symbols-outlined input-icon">mail</span>
-                  <input
-                    className="form-input"
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="ten@congty.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onFocus={() => setFocusedField('email')}
-                    onBlur={() => setFocusedField(null)}
-                    disabled={status !== 'idle'}
-                    autoComplete="email"
-                  />
-                </div>
-              </div>
-
-              {/* Password & Confirm Password Grid */}
-              <div className="password-grid">
+            {/* BƯỚC 1: NHẬP THÔNG TIN ĐĂNG KÝ */}
+            {!isOtpStep ? (
+              <form className="register-form" onSubmit={handleRegisterSubmit}>
+                {/* Username */}
                 <div className="input-group">
-                  <label className="input-label" htmlFor="password">
-                    Mật khẩu
+                  <label className="input-label" htmlFor="username">
+                    Tên đăng nhập
                   </label>
-                  <div className={`input-wrapper ${focusedField === 'password' ? 'scaled' : ''}`}>
-                    <span className="material-symbols-outlined input-icon">lock</span>
+                  <div className={`input-wrapper ${focusedField === 'username' ? 'scaled' : ''}`}>
+                    <span className="material-symbols-outlined input-icon">person</span>
                     <input
                       className="form-input"
-                      id="password"
-                      name="password"
-                      type="password"
-                      placeholder="••••••••"
+                      id="username"
+                      name="username"
+                      type="text"
+                      placeholder="johndoe"
                       required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onFocus={() => setFocusedField('password')}
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      onFocus={() => setFocusedField('username')}
                       onBlur={() => setFocusedField(null)}
                       disabled={status !== 'idle'}
-                      autoComplete="new-password"
+                      autoComplete="username"
                     />
                   </div>
                 </div>
 
+                {/* Email */}
                 <div className="input-group">
-                  <label className="input-label" htmlFor="confirm_password">
-                    Xác nhận mật khẩu
+                  <label className="input-label" htmlFor="email">
+                    Địa chỉ Email
                   </label>
-                  <div className={`input-wrapper ${focusedField === 'confirm_password' ? 'scaled' : ''}`}>
-                    <span className="material-symbols-outlined input-icon">enhanced_encryption</span>
+                  <div className={`input-wrapper ${focusedField === 'email' ? 'scaled' : ''}`}>
+                    <span className="material-symbols-outlined input-icon">mail</span>
                     <input
                       className="form-input"
-                      id="confirm_password"
-                      name="confirm_password"
-                      type="password"
-                      placeholder="••••••••"
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="ten@congty.com"
                       required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      onFocus={() => setFocusedField('confirm_password')}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onFocus={() => setFocusedField('email')}
                       onBlur={() => setFocusedField(null)}
                       disabled={status !== 'idle'}
-                      autoComplete="new-password"
+                      autoComplete="email"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Agreement */}
-              <div className="agreement-row">
-                <input
-                  className="agreement-checkbox"
-                  id="terms"
-                  name="terms"
-                  type="checkbox"
-                  checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                {/* Password & Confirm Password Grid */}
+                <div className="password-grid">
+                  <div className="input-group">
+                    <label className="input-label" htmlFor="password">
+                      Mật khẩu
+                    </label>
+                    <div className={`input-wrapper ${focusedField === 'password' ? 'scaled' : ''}`}>
+                      <span className="material-symbols-outlined input-icon">lock</span>
+                      <input
+                        className="form-input"
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="••••••••"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onFocus={() => setFocusedField('password')}
+                        onBlur={() => setFocusedField(null)}
+                        disabled={status !== 'idle'}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <label className="input-label" htmlFor="confirm_password">
+                      Xác nhận mật khẩu
+                    </label>
+                    <div className={`input-wrapper ${focusedField === 'confirm_password' ? 'scaled' : ''}`}>
+                      <span className="material-symbols-outlined input-icon">enhanced_encryption</span>
+                      <input
+                        className="form-input"
+                        id="confirm_password"
+                        name="confirm_password"
+                        type="password"
+                        placeholder="••••••••"
+                        required
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onFocus={() => setFocusedField('confirm_password')}
+                        onBlur={() => setFocusedField(null)}
+                        disabled={status !== 'idle'}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Agreement */}
+                <div className="agreement-row">
+                  <input
+                    className="agreement-checkbox"
+                    id="terms"
+                    name="terms"
+                    type="checkbox"
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    disabled={status !== 'idle'}
+                  />
+                  <label className="agreement-label" htmlFor="terms">
+                    Tôi đồng ý với{' '}
+                    <a href="#terms-link" onClick={(e) => e.preventDefault()}>
+                      Điều khoản dịch vụ
+                    </a>{' '}
+                    và{' '}
+                    <a href="#privacy-link" onClick={(e) => e.preventDefault()}>
+                      Chính sách bảo mật
+                    </a>
+                    .
+                  </label>
+                </div>
+
+                {/* CTA Action button with ripples */}
+                <button
+                  className={`btn-submit ${status === 'submitting' ? 'submitting' : ''}`}
+                  type="submit"
+                  onClick={handleButtonClick}
                   disabled={status !== 'idle'}
-                />
-                <label className="agreement-label" htmlFor="terms">
-                  Tôi đồng ý với{' '}
-                  <a href="#terms-link" onClick={(e) => e.preventDefault()}>
-                    Điều khoản dịch vụ
-                  </a>{' '}
-                  và{' '}
-                  <a href="#privacy-link" onClick={(e) => e.preventDefault()}>
-                    Chính sách bảo mật
-                  </a>
-                  .
-                </label>
-              </div>
+                >
+                  {status === 'idle' && 'Tạo tài khoản'}
+                  {status === 'submitting' && (
+                    <>
+                      <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                      Đang gửi yêu cầu...
+                    </>
+                  )}
+                  {ripples.map((ripple) => (
+                    <span
+                      key={ripple.id}
+                      className="ripple active"
+                      style={{ left: ripple.x, top: ripple.y }}
+                    />
+                  ))}
+                </button>
+              </form>
+            ) : (
+              // BƯỚC 2: NHẬP XÁC THỰC MÃ OTP
+              <form className="register-form" onSubmit={handleVerifyOtpSubmit}>
+                <div className="input-group">
+                  <label className="input-label" htmlFor="otpCode">
+                    Mã OTP (6 chữ số)
+                  </label>
+                  <div className={`input-wrapper ${focusedField === 'otpCode' ? 'scaled' : ''}`}>
+                    <span className="material-symbols-outlined input-icon">pin</span>
+                    <input
+                      className="form-input"
+                      id="otpCode"
+                      name="otpCode"
+                      type="text"
+                      maxLength={6}
+                      placeholder="123456"
+                      required
+                      style={{ letterSpacing: '6px', fontSize: '18px', textAlign: 'center', fontWeight: 'bold' }}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))} // Chỉ nhập số
+                      onFocus={() => setFocusedField('otpCode')}
+                      onBlur={() => setFocusedField(null)}
+                      disabled={status === 'submitting'}
+                    />
+                  </div>
+                </div>
 
-              {/* CTA Action button with ripples */}
-              <button
-                className={`btn-submit ${status === 'submitting' ? 'submitting' : ''} ${status === 'success' ? 'success' : ''}`}
-                type="submit"
-                onClick={handleButtonClick}
-                disabled={status !== 'idle'}
-              >
-                {status === 'idle' && 'Tạo tài khoản'}
-                {status === 'submitting' && (
-                  <>
-                    <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                    Đang thiết lập...
-                  </>
-                )}
-                {status === 'success' && (
-                  <>
-                    <span className="material-symbols-outlined">check_circle</span>
-                    Thành công
-                  </>
-                )}
-                {ripples.map((ripple) => (
-                  <span
-                    key={ripple.id}
-                    className="ripple active"
-                    style={{ left: ripple.x, top: ripple.y }}
-                  />
-                ))}
-              </button>
-            </form>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                  <button
+                    type="button"
+                    className="btn-submit"
+                    style={{ backgroundColor: '#eeeeee', color: '#333333' }}
+                    onClick={() => setIsOtpStep(false)}
+                    disabled={status === 'submitting'}
+                  >
+                    Quay lại
+                  </button>
+                  <button
+                    className={`btn-submit ${status === 'submitting' ? 'submitting' : ''}`}
+                    type="submit"
+                    onClick={handleButtonClick}
+                    disabled={status === 'submitting'}
+                  >
+                    {status === 'submitting' ? 'Đang xác thực...' : 'Xác thực OTP'}
+                    {ripples.map((ripple) => (
+                      <span
+                        key={ripple.id}
+                        className="ripple active"
+                        style={{ left: ripple.x, top: ripple.y }}
+                      />
+                    ))}
+                  </button>
+                </div>
+
+                <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={resendCountdown > 0}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: resendCountdown > 0 ? '#999999' : '#4CAF50',
+                      cursor: resendCountdown > 0 ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    {resendCountdown > 0 
+                      ? `Gửi lại mã OTP sau (${resendCountdown}s)` 
+                      : 'Gửi lại mã OTP qua Gmail'}
+                  </button>
+                </div>
+              </form>
+            )}
 
             {/* Divider */}
             <div className="divider-container">
@@ -340,7 +337,6 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
             </p>
           </div>
 
-          {/* Bottom Floating Decoration for Mobile */}
           <div className="mobile-security-badge">
             <span className="material-symbols-outlined">verified_user</span>
             <span className="material-symbols-outlined">shield</span>
@@ -351,3 +347,4 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
     </div>
   );
 };
+
