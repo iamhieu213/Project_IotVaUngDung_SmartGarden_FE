@@ -1,54 +1,17 @@
 // src/components/ForgotPassword/ForgotPassword.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import './ForgotPassword.css';
 import { Link } from 'react-router-dom';
-import api from '../../utils/api';
-import Swal from 'sweetalert2';
+import { useForgotPassword } from '../../hooks/useForgotPassword';
 
 export const ForgotPassword: React.FC = () => {
-  const [email, setEmail] = useState<string>('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState<string>('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    setStatus('loading');
-    setMessage('');
-
-    try {
-      const response = await api.post('/auth/forgot-password', { email });
-
-      if (response.data.success) {
-        setStatus('success');
-        const token = response.data.data?.token;
-        // In ra console log để dev dễ lấy token test API
-        console.log('Mã reset token nhận từ API:', token);
-        
-        const successMsg = response.data.message || 'Mã khôi phục mật khẩu đã được tạo thành công.';
-        setMessage(successMsg);
-
-        await Swal.fire({
-          icon: 'success',
-          title: 'Yêu cầu thành công',
-          html: `Mã khôi phục mật khẩu đã được tạo!<br/><b>Mã Token:</b> ${token || 'Đã gửi qua email'}`,
-          confirmButtonText: 'Đóng',
-        });
-      }
-    } catch (error: any) {
-      setStatus('error');
-      const errorMsg = error.response?.data?.message || 'Có lỗi xảy ra hoặc email không tồn tại.';
-      setMessage(errorMsg);
-
-      await Swal.fire({
-        icon: 'error',
-        title: 'Yêu cầu thất bại',
-        text: errorMsg,
-        confirmButtonText: 'Thử lại',
-      });
-    }
-  };
+  const {
+    email,
+    setEmail,
+    status,
+    message,
+    handleSubmit,
+  } = useForgotPassword();
 
   return (
     <div className="forgot-password-container">
@@ -114,7 +77,7 @@ export const ForgotPassword: React.FC = () => {
             <div className="header-text">
               <h1 className="main-title">Quên Mật Khẩu</h1>
               <p className="subtitle">
-                Nhập địa chỉ email của bạn để nhận liên kết khôi phục và tiếp tục truy cập dữ liệu phân tích trang trại.
+                Nhập địa chỉ email của bạn để nhận mã xác thực OTP khôi phục mật khẩu tài khoản trang trại của bạn.
               </p>
             </div>
 
@@ -152,9 +115,9 @@ export const ForgotPassword: React.FC = () => {
                 <div className="alert-message success-alert">
                   <span className="material-symbols-outlined">check_circle</span>
                   <div>
-                    <p className="font-semibold">Đã gửi mã khôi phục thành công!</p>
+                    <p className="font-semibold">Đã gửi mã OTP thành công!</p>
                     <p className="text-xs mt-1">
-                      Hãy kiểm tra bảng điều khiển console (F12) để lấy Token hoặc kiểm tra hộp thư của bạn.
+                      Hãy kiểm tra Gmail của bạn để lấy mã OTP đặt lại mật khẩu.
                     </p>
                   </div>
                 </div>
@@ -176,11 +139,11 @@ export const ForgotPassword: React.FC = () => {
                 ) : status === 'success' ? (
                   <>
                     <span className="material-symbols-outlined">check_circle</span>
-                    <span>Đã Gửi Liên Kết</span>
+                    <span>Đã Gửi OTP</span>
                   </>
                 ) : (
                   <>
-                    <span>Gửi mã khôi phục</span>
+                    <span>Gửi mã xác thực OTP</span>
                     <span className="material-symbols-outlined arrow-icon">arrow_forward</span>
                   </>
                 )}

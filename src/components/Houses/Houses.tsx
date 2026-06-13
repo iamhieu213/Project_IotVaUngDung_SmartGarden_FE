@@ -8,6 +8,7 @@ import api from '../../utils/api';
 interface House {
   id: string;
   name: string;
+  address?: string;
   width: number;
   height: number;
   deviceCount: number;
@@ -61,6 +62,7 @@ export const Houses: React.FC = () => {
             return {
               id: h.id,
               name: h.name,
+              address: h.address || '',
               width: h.width || 0,
               height : h.height || 0,
               deviceCount : deviceCount,
@@ -266,6 +268,182 @@ export const Houses: React.FC = () => {
     }
   };
 
+  // Handle editing house info
+  const handleEditHouse = async (house: House) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Chỉnh sửa nhà nấm',
+      html: `
+        <style>
+          .swal-form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 10px 0;
+            font-family: 'Inter', sans-serif;
+          }
+          .swal-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .swal-form-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--db-on-surface-variant);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+          .swal-form-label .material-symbols-outlined {
+            font-size: 16px;
+            color: var(--db-primary);
+          }
+          .swal-form-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--db-outline-variant);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            background-color: var(--db-surface-container-low);
+            color: var(--db-on-surface);
+            transition: all 0.2s ease;
+          }
+          .swal-form-input:focus {
+            border-color: var(--db-primary);
+            background-color: var(--db-surface-container-lowest);
+            box-shadow: 0 0 0 3px rgba(0, 108, 73, 0.15);
+          }
+          .swal-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .custom-swal-popup {
+            border-radius: 16px !important;
+            background-color: var(--db-surface-container-lowest) !important;
+            border: 1px solid var(--db-outline-variant) !important;
+            padding: 24px !important;
+          }
+          .custom-swal-confirm-btn {
+            background-color: var(--db-primary) !important;
+            color: #ffffff !important;
+            border: none !important;
+            padding: 10px 24px !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            margin-left: 8px !important;
+            transition: all 0.2s ease !important;
+          }
+          .custom-swal-confirm-btn:hover {
+            opacity: 0.9 !important;
+          }
+          .custom-swal-cancel-btn {
+            background-color: transparent !important;
+            color: var(--db-on-surface-variant) !important;
+            border: 1px solid var(--db-outline-variant) !important;
+            padding: 10px 24px !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+          }
+          .custom-swal-cancel-btn:hover {
+            background-color: var(--db-surface-container-low) !important;
+          }
+        </style>
+        <div class="swal-form-container">
+          <div class="swal-form-group">
+            <label class="swal-form-label">
+              <span class="material-symbols-outlined">badge</span> Tên nhà nấm
+            </label>
+            <input id="swal-input-name" class="swal-form-input" placeholder="Ví dụ: Nhà nấm Sò Alpha" value="${house.name}">
+          </div>
+          <div class="swal-form-group">
+            <label class="swal-form-label">
+              <span class="material-symbols-outlined">location_on</span> Địa chỉ lắp đặt
+            </label>
+            <input id="swal-input-address" class="swal-form-input" placeholder="Ví dụ: Khu A, Trại Củ Chi, TP.HCM" value="${house.address || ''}">
+          </div>
+          <div class="swal-form-grid">
+            <div class="swal-form-group">
+              <label class="swal-form-label">
+                <span class="material-symbols-outlined">straighten</span> Rộng (mét)
+              </label>
+              <input id="swal-input-width" type="number" class="swal-form-input" min="0" placeholder="Ví dụ: 12" value="${house.width}">
+            </div>
+            <div class="swal-form-group">
+              <label class="swal-form-label">
+                <span class="material-symbols-outlined">straighten</span> Dài (mét)
+              </label>
+              <input id="swal-input-height" type="number" class="swal-form-input" min="0" placeholder="Ví dụ: 24" value="${house.height}">
+            </div>
+          </div>
+        </div>
+      `,
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'custom-swal-confirm-btn',
+        cancelButton: 'custom-swal-cancel-btn',
+      },
+      buttonsStyling: false,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Cập nhật',
+      cancelButtonText: 'Hủy',
+      preConfirm: () => {
+        const name = (document.getElementById('swal-input-name') as HTMLInputElement).value;
+        const address = (document.getElementById('swal-input-address') as HTMLInputElement).value;
+        const width = (document.getElementById('swal-input-width') as HTMLInputElement).value;
+        const height = (document.getElementById('swal-input-height') as HTMLInputElement).value;
+
+        if (!name || !address) {
+          Swal.showValidationMessage('Vui lòng nhập đầy đủ tên và địa chỉ nhà nấm');
+          return false;
+        }
+        return {
+          name,
+          address,
+          width: Number(width) || 0,
+          height: Number(height) || 0,
+        };
+      },
+    });
+
+    if (formValues) {
+      try {
+        const response = await api.put(`/houses/${house.id}`, formValues);
+        if (response.data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Thành công',
+            text: 'Đã cập nhật thông tin nhà nấm thành công!',
+            timer: 1500,
+            showConfirmButton: false,
+          });
+          fetchHouses();
+        }
+      } catch (err: any) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Lỗi',
+          text: err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật nhà nấm.',
+        });
+      }
+    }
+  };
+
   // Dynamic 3D tilt micro-interaction on mouse move
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const card = e.currentTarget as HTMLDivElement;
@@ -462,7 +640,11 @@ export const Houses: React.FC = () => {
                             <span className="material-symbols-outlined">visibility</span>
                             Xem
                           </button>
-                          <button type="button" className="card-action-btn border-outline">
+                           <button 
+                            type="button" 
+                            className="card-action-btn border-outline"
+                            onClick={() => handleEditHouse(house)}
+                          >
                             <span className="material-symbols-outlined">edit</span>
                             Sửa
                           </button>
