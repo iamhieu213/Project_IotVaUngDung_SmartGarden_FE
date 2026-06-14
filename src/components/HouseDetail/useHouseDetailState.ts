@@ -174,6 +174,41 @@ export const useHouseDetailState = () => {
     });
   };
 
+  const handleDeleteSensorPosition = async (deviceId: string, sensorKey: string) => {
+    const result = await Swal.fire({
+      title: 'Xác nhận xóa cảm biến?',
+      text: 'Hành động này sẽ xóa cấu hình vị trí của cảm biến này khỏi thiết bị.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'Đồng ý xóa',
+      cancelButtonText: 'Hủy bỏ'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await api.delete(`/devices/${deviceId}/sensor-position/${sensorKey}`);
+        if (response.data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Đã xóa cảm biến',
+            text: 'Cấu hình vị trí cảm biến đã được gỡ bỏ.',
+            timer: 1500,
+            showConfirmButton: false
+          });
+          await fetchDevices();
+        }
+      } catch (err: any) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Lỗi',
+          text: err.response?.data?.message || 'Có lỗi xảy ra khi xóa cảm biến.'
+        });
+      }
+    }
+  };
+
   const handleLocateDeviceClick = (device: any) => {
     const SENSOR_LABELS: Record<string, string> = {
       temperature: 'Nhiệt độ',
@@ -375,8 +410,14 @@ export const useHouseDetailState = () => {
 
   const countSensors = (type: string) => {
     return devices.reduce((acc, device) => {
-      if (device.sensorPositions && device.sensorPositions[type]) {
-        return acc + 1;
+      if (device.sensorPositions) {
+        let count = 0;
+        Object.keys(device.sensorPositions).forEach((key) => {
+          if (key === type || key.startsWith(type)) {
+            count++;
+          }
+        });
+        return acc + count;
       }
       return acc;
     }, 0);
@@ -388,12 +429,33 @@ export const useHouseDetailState = () => {
 
   const activeDevicesWithTelemetry = devices.filter((d: any) => d.status === 'online' && d.latestTelemetry);
 
-  const averageHumidity = activeDevicesWithTelemetry.length > 0
-    ? Math.round(activeDevicesWithTelemetry.reduce((acc, curr) => acc + curr.latestTelemetry.humidity, 0) / activeDevicesWithTelemetry.length)
+  let totalHumidity = 0;
+  let humidityCount = 0;
+  let totalTemperature = 0;
+  let temperatureCount = 0;
+
+  activeDevicesWithTelemetry.forEach((d: any) => {
+    const telemetry = d.latestTelemetry || {};
+    Object.keys(telemetry).forEach((key) => {
+      const val = telemetry[key];
+      if (typeof val === 'number') {
+        if (key.startsWith('humidity')) {
+          totalHumidity += val;
+          humidityCount++;
+        } else if (key.startsWith('temperature')) {
+          totalTemperature += val;
+          temperatureCount++;
+        }
+      }
+    });
+  });
+
+  const averageHumidity = humidityCount > 0
+    ? Math.round(totalHumidity / humidityCount)
     : null;
 
-  const averageTemperature = activeDevicesWithTelemetry.length > 0
-    ? (activeDevicesWithTelemetry.reduce((acc, curr) => acc + curr.latestTelemetry.temperature, 0) / activeDevicesWithTelemetry.length).toFixed(1)
+  const averageTemperature = temperatureCount > 0
+    ? (totalTemperature / temperatureCount).toFixed(1)
     : null;
 
   return {
@@ -422,6 +484,7 @@ export const useHouseDetailState = () => {
     handleAddDevice,
     handleDeleteDevice,
     handleSensorDoubleClick,
+    handleDeleteSensorPosition,
     handleLocateDeviceClick,
     handleSensorMouseDown,
     handleStartDragNewSensor,

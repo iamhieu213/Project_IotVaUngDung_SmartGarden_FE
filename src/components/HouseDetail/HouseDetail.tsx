@@ -16,7 +16,17 @@ import { useHouseDetailState } from './useHouseDetailState';
 
 const getSensorLucideIcon = (sensorKey: string) => {
   const size = 14;
-  switch (sensorKey) {
+  const getBaseSensorKey = (key: string) => {
+    if (key.startsWith('temperature')) return 'temperature';
+    if (key.startsWith('humidity')) return 'humidity';
+    if (key.startsWith('soilMoisture')) return 'soilMoisture';
+    if (key.startsWith('lightIntensity')) return 'lightIntensity';
+    if (key.startsWith('waterLevel')) return 'waterLevel';
+    return key;
+  };
+
+  const baseKey = getBaseSensorKey(sensorKey);
+  switch (baseKey) {
     case 'temperature':
       return <Thermometer size={size} style={{ color: '#ef4444' }} />;
     case 'humidity':
@@ -25,6 +35,8 @@ const getSensorLucideIcon = (sensorKey: string) => {
       return <Droplets size={size} style={{ color: '#4f46e5' }} />;
     case 'lightIntensity':
       return <Sun size={size} style={{ color: '#d97706' }} />;
+    case 'waterLevel':
+      return <Droplets size={size} style={{ color: '#a855f7' }} />;
     default:
       return <HelpCircle size={size} style={{ color: '#6b7280' }} />;
   }
@@ -53,6 +65,7 @@ export const HouseDetail: React.FC = () => {
     handleAddDevice,
     handleDeleteDevice,
     handleSensorDoubleClick,
+    handleDeleteSensorPosition,
     handleLocateDeviceClick,
     handleSensorMouseDown,
     handleStartDragNewSensor,
@@ -184,30 +197,43 @@ export const HouseDetail: React.FC = () => {
                 const telemetry = device.latestTelemetry;
                 const positions = device.sensorPositions || {};
 
+                const getBaseSensorKey = (key: string) => {
+                  if (key.startsWith('temperature')) return 'temperature';
+                  if (key.startsWith('humidity')) return 'humidity';
+                  if (key.startsWith('soilMoisture')) return 'soilMoisture';
+                  if (key.startsWith('lightIntensity')) return 'lightIntensity';
+                  if (key.startsWith('waterLevel')) return 'waterLevel';
+                  return key;
+                };
+
                 const SENSOR_ICONS: Record<string, string> = {
                   temperature: 'thermostat',
                   humidity: 'humidity_percentage',
-                  soilMoisture: 'water_drop',
-                  lightIntensity: 'wb_sunny',
+                  soilMoisture: 'opacity',
+                  lightIntensity: 'light_mode',
+                  waterLevel: 'water_drop',
                 };
 
                 const getSensorValueStr = (key: string) => {
                   if (!isOnline || !telemetry || telemetry[key] === undefined) return '--';
                   const val = telemetry[key];
-                  if (val === -127 || val === -999 || val === -1 || String(val).toLowerCase() === 'nan' || (key === 'soilMoisture' && val < 0)) {
+                  if (val === -127 || val === -999 || val === -1 || String(val).toLowerCase() === 'nan' || (key.startsWith('soilMoisture') && val < 0)) {
                     return '⚠️ ERR';
                   }
-                  if (key === 'temperature') return `${val}°C`;
-                  if (key === 'humidity') return `${val}%`;
-                  if (key === 'soilMoisture') return `${val}%`;
-                  if (key === 'lightIntensity') return `${val} lx`;
+                  const base = getBaseSensorKey(key);
+                  if (base === 'temperature') return `${val}°C`;
+                  if (base === 'humidity') return `${val}%`;
+                  if (base === 'soilMoisture') return `${val}%`;
+                  if (base === 'lightIntensity') return `${val} lx`;
+                  if (base === 'waterLevel') return `${val} cm`;
                   return String(val);
                 };
 
                 return Object.entries(positions).map(([sensorKey, pos]: [string, any]) => {
                   if (pos.spaceX === undefined || pos.spaceY === undefined) return null;
 
-                  const icon = SENSOR_ICONS[sensorKey] || 'sensors';
+                  const baseKey = getBaseSensorKey(sensorKey);
+                  const icon = SENSOR_ICONS[baseKey] || 'sensors';
                   const valStr = getSensorValueStr(sensorKey);
                   const isSensorError = valStr === '⚠️ ERR';
                   const isSensorOnline = isOnline && !isSensorError;
@@ -217,8 +243,11 @@ export const HouseDetail: React.FC = () => {
                     humidity: 'Độ ẩm không khí',
                     soilMoisture: 'Độ ẩm đất',
                     lightIntensity: 'Cường độ ánh sáng',
+                    waterLevel: 'Mực nước',
                   };
-                  const labelText = pos.displayName || `${SENSOR_LABELS[sensorKey] || sensorKey}`;
+                  const suffix = sensorKey.replace(baseKey, '');
+                  const defaultLabel = `${SENSOR_LABELS[baseKey] || baseKey}${suffix ? ' ' + suffix : ''}`;
+                  const labelText = pos.displayName || defaultLabel;
 
                   return (
                     <SensorCard
@@ -263,6 +292,7 @@ export const HouseDetail: React.FC = () => {
             handleDeleteDevice={handleDeleteDevice}
             handleStartDragNewSensor={handleStartDragNewSensor}
             handleSensorDoubleClick={handleSensorDoubleClick}
+            handleDeleteSensorPosition={handleDeleteSensorPosition}
             handleAddDevice={handleAddDevice}
             getSensorLucideIcon={getSensorLucideIcon}
             isCollapsed={isStatusPanelCollapsed}

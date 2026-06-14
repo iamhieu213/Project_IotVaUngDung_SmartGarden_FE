@@ -16,10 +16,7 @@ interface House {
 
 interface TelemetryPoint {
   time: string;
-  temperature: number;
-  humidity: number;
-  soilMoisture: number;
-  lightIntensity: number;
+  [key: string]: any;
 }
 
 interface ComparisonData {
@@ -47,11 +44,99 @@ export const Analytics: React.FC = () => {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingComparison, setLoadingComparison] = useState(false);
 
-  // Metric Visibilities (Toggles in Legend)
-  const [visibleTemp, setVisibleTemp] = useState(true);
-  const [visibleHum, setVisibleHum] = useState(true);
-  const [visibleSoil, setVisibleSoil] = useState(true);
-  const [visibleLight, setVisibleLight] = useState(true);
+  // Dynamic Metric Visibilities (Toggles in Legend)
+  const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
+
+  // Helper to extract active keys from historyData (excluding 'time')
+  const getActiveKeys = () => {
+    if (historyData.length === 0) return [];
+    const keys = new Set<string>();
+    historyData.forEach((d) => {
+      Object.keys(d).forEach((k) => {
+        if (k !== 'time' && typeof d[k] === 'number') {
+          keys.add(k);
+        }
+      });
+    });
+    return Array.from(keys);
+  };
+
+  // Helper to map dynamic key name to config (scale, color, label, unit, etc.)
+  const getSensorConfig = (key: string) => {
+    if (key.startsWith('temperature')) {
+      const index = key.replace('temperature', '') || '1';
+      return {
+        label: `Nhiệt độ ${index} (°C)`,
+        color: '#ff5722',
+        scale: 50,
+        gradId: 'tempGrad',
+        unit: '°C'
+      };
+    }
+    if (key.startsWith('humidity')) {
+      const index = key.replace('humidity', '') || '1';
+      return {
+        label: `Độ ẩm khí ${index} (%)`,
+        color: '#2196f3',
+        scale: 100,
+        gradId: 'humGrad',
+        unit: '%'
+      };
+    }
+    if (key.startsWith('soilMoisture')) {
+      const index = key.replace('soilMoisture', '') || '1';
+      return {
+        label: `Độ ẩm đất ${index} (%)`,
+        color: '#4caf50',
+        scale: 100,
+        gradId: 'soilGrad',
+        unit: '%'
+      };
+    }
+    if (key.startsWith('waterLevel')) {
+      const index = key.replace('waterLevel', '') || '1';
+      return {
+        label: `Mực nước ${index} (cm)`,
+        color: '#9c27b0',
+        scale: 100,
+        gradId: 'waterGrad',
+        unit: 'cm'
+      };
+    }
+    if (key.startsWith('lightIntensity') || key.startsWith('lightLevel')) {
+      const index = key.replace('lightIntensity', '').replace('lightLevel', '') || '1';
+      return {
+        label: `Ánh sáng ${index} (Lux)`,
+        color: '#ffc107',
+        scale: 2000,
+        gradId: 'lightGrad',
+        unit: 'lux'
+      };
+    }
+    return {
+      label: key,
+      color: '#64748b',
+      scale: 100,
+      gradId: 'defaultGrad',
+      unit: ''
+    };
+  };
+
+  // Auto-initialize key visibilities when historyData updates
+  useEffect(() => {
+    if (historyData.length > 0) {
+      const keys = getActiveKeys();
+      setVisibleKeys((prev) => {
+        const next = { ...prev };
+        keys.forEach((k) => {
+          if (next[k] === undefined) {
+            next[k] = true;
+          }
+        });
+        return next;
+      });
+    }
+  }, [historyData]);
 
   // Line Chart Hover State
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -160,7 +245,7 @@ export const Analytics: React.FC = () => {
   };
 
   // Generate SVG path for lines
-  const generateLinePath = (key: 'temperature' | 'humidity' | 'soilMoisture' | 'lightIntensity', maxVal: number) => {
+  const generateLinePath = (key: string, maxVal: number) => {
     if (historyData.length < 2) return '';
     return historyData
       .map((d, i) => {
@@ -172,7 +257,7 @@ export const Analytics: React.FC = () => {
   };
 
   // Generate SVG path for filled area under lines
-  const generateAreaPath = (key: 'temperature' | 'humidity' | 'soilMoisture' | 'lightIntensity', maxVal: number) => {
+  const generateAreaPath = (key: string, maxVal: number) => {
     if (historyData.length < 2) return '';
     const points = historyData.map((d, i) => {
       const x = linePaddingLeft + (i * activeWidth) / (historyData.length - 1);
@@ -353,38 +438,31 @@ export const Analytics: React.FC = () => {
 
                   {/* Interactive Legend / Toggle buttons */}
                   <div className="chart-legend-selectors">
-                    <button
-                      type="button"
-                      className={`legend-tag temp ${visibleTemp ? 'selected' : 'disabled'}`}
-                      onClick={() => setVisibleTemp(!visibleTemp)}
-                    >
-                      <span className="legend-bullet"></span>
-                      Nhiệt độ (°C)
-                    </button>
-                    <button
-                      type="button"
-                      className={`legend-tag hum ${visibleHum ? 'selected' : 'disabled'}`}
-                      onClick={() => setVisibleHum(!visibleHum)}
-                    >
-                      <span className="legend-bullet"></span>
-                      Độ ẩm khí (%)
-                    </button>
-                    <button
-                      type="button"
-                      className={`legend-tag soil ${visibleSoil ? 'selected' : 'disabled'}`}
-                      onClick={() => setVisibleSoil(!visibleSoil)}
-                    >
-                      <span className="legend-bullet"></span>
-                      Độ ẩm đất (%)
-                    </button>
-                    <button
-                      type="button"
-                      className={`legend-tag light ${visibleLight ? 'selected' : 'disabled'}`}
-                      onClick={() => setVisibleLight(!visibleLight)}
-                    >
-                      <span className="legend-bullet"></span>
-                      Ánh sáng (Lux)
-                    </button>
+                    {getActiveKeys().map((key) => {
+                      const conf = getSensorConfig(key);
+                      const isVisible = visibleKeys[key] !== false;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`legend-tag ${isVisible ? 'selected' : 'disabled'}`}
+                          style={{
+                            borderColor: conf.color,
+                            backgroundColor: isVisible ? `${conf.color}15` : 'transparent',
+                            color: isVisible ? '#1e293b' : '#94a3b8'
+                          }}
+                          onClick={() => {
+                            setVisibleKeys(prev => ({
+                              ...prev,
+                              [key]: !isVisible
+                            }));
+                          }}
+                        >
+                          <span className="legend-bullet" style={{ backgroundColor: conf.color }}></span>
+                          {conf.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -424,6 +502,14 @@ export const Analytics: React.FC = () => {
                           <linearGradient id="lightGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#ffc107" stopOpacity="0.25" />
                             <stop offset="100%" stopColor="#ffc107" stopOpacity="0.0" />
+                          </linearGradient>
+                          <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#9c27b0" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#9c27b0" stopOpacity="0.0" />
+                          </linearGradient>
+                          <linearGradient id="defaultGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#64748b" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#64748b" stopOpacity="0.0" />
                           </linearGradient>
                         </defs>
 
@@ -474,76 +560,35 @@ export const Analytics: React.FC = () => {
                         })}
 
                         {/* Background Areas under Lines */}
-                        {visibleTemp && (
-                          <path
-                            d={generateAreaPath('temperature', scaleTemp)}
-                            fill="url(#tempGrad)"
-                            style={{ transition: 'all 0.3s ease' }}
-                          />
-                        )}
-                        {visibleHum && (
-                          <path
-                            d={generateAreaPath('humidity', scaleHum)}
-                            fill="url(#humGrad)"
-                            style={{ transition: 'all 0.3s ease' }}
-                          />
-                        )}
-                        {visibleSoil && (
-                          <path
-                            d={generateAreaPath('soilMoisture', scaleSoil)}
-                            fill="url(#soilGrad)"
-                            style={{ transition: 'all 0.3s ease' }}
-                          />
-                        )}
-                        {visibleLight && (
-                          <path
-                            d={generateAreaPath('lightIntensity', scaleLight)}
-                            fill="url(#lightGrad)"
-                            style={{ transition: 'all 0.3s ease' }}
-                          />
-                        )}
+                        {getActiveKeys().map((key) => {
+                          const conf = getSensorConfig(key);
+                          if (visibleKeys[key] === false) return null;
+                          return (
+                            <path
+                              key={`area-${key}`}
+                              d={generateAreaPath(key, conf.scale)}
+                              fill={`url(#${conf.gradId})`}
+                              style={{ transition: 'all 0.3s ease' }}
+                            />
+                          );
+                        })}
 
                         {/* Telemetry Lines */}
-                        {visibleTemp && (
-                          <path
-                            d={generateLinePath('temperature', scaleTemp)}
-                            fill="none"
-                            stroke="#ff5722"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            style={{ transition: 'all 0.3s ease' }}
-                          />
-                        )}
-                        {visibleHum && (
-                          <path
-                            d={generateLinePath('humidity', scaleHum)}
-                            fill="none"
-                            stroke="#2196f3"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            style={{ transition: 'all 0.3s ease' }}
-                          />
-                        )}
-                        {visibleSoil && (
-                          <path
-                            d={generateLinePath('soilMoisture', scaleSoil)}
-                            fill="none"
-                            stroke="#4caf50"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            style={{ transition: 'all 0.3s ease' }}
-                          />
-                        )}
-                        {visibleLight && (
-                          <path
-                            d={generateLinePath('lightIntensity', scaleLight)}
-                            fill="none"
-                            stroke="#ffc107"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            style={{ transition: 'all 0.3s ease' }}
-                          />
-                        )}
+                        {getActiveKeys().map((key) => {
+                          const conf = getSensorConfig(key);
+                          if (visibleKeys[key] === false) return null;
+                          return (
+                            <path
+                              key={`line-${key}`}
+                              d={generateLinePath(key, conf.scale)}
+                              fill="none"
+                              stroke={conf.color}
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              style={{ transition: 'all 0.3s ease' }}
+                            />
+                          );
+                        })}
 
                         {/* Interactive vertical hover lines and points */}
                         {hoveredIndex !== null && (
@@ -559,46 +604,22 @@ export const Analytics: React.FC = () => {
                               strokeDasharray="4 4"
                             />
                             {/* Dots */}
-                            {visibleTemp && (
-                              <circle
-                                cx={linePaddingLeft + (hoveredIndex * activeWidth) / (historyData.length - 1)}
-                                cy={getY(historyData[hoveredIndex].temperature, scaleTemp)}
-                                r="5.5"
-                                fill="#ff5722"
-                                stroke="#ffffff"
-                                strokeWidth="2.5"
-                              />
-                            )}
-                            {visibleHum && (
-                              <circle
-                                cx={linePaddingLeft + (hoveredIndex * activeWidth) / (historyData.length - 1)}
-                                cy={getY(historyData[hoveredIndex].humidity, scaleHum)}
-                                r="5.5"
-                                fill="#2196f3"
-                                stroke="#ffffff"
-                                strokeWidth="2.5"
-                              />
-                            )}
-                            {visibleSoil && (
-                              <circle
-                                cx={linePaddingLeft + (hoveredIndex * activeWidth) / (historyData.length - 1)}
-                                cy={getY(historyData[hoveredIndex].soilMoisture, scaleSoil)}
-                                r="5.5"
-                                fill="#4caf50"
-                                stroke="#ffffff"
-                                strokeWidth="2.5"
-                              />
-                            )}
-                            {visibleLight && (
-                              <circle
-                                cx={linePaddingLeft + (hoveredIndex * activeWidth) / (historyData.length - 1)}
-                                cy={getY(historyData[hoveredIndex].lightIntensity, scaleLight)}
-                                r="5.5"
-                                fill="#ffc107"
-                                stroke="#ffffff"
-                                strokeWidth="2.5"
-                              />
-                            )}
+                            {getActiveKeys().map((key) => {
+                              const conf = getSensorConfig(key);
+                              if (visibleKeys[key] === false) return null;
+                              const val = historyData[hoveredIndex][key] ?? 0;
+                              return (
+                                <circle
+                                  key={`dot-${key}`}
+                                  cx={linePaddingLeft + (hoveredIndex * activeWidth) / (historyData.length - 1)}
+                                  cy={getY(val, conf.scale)}
+                                  r="5.5"
+                                  fill={conf.color}
+                                  stroke="#ffffff"
+                                  strokeWidth="2.5"
+                                />
+                              );
+                            })}
                           </g>
                         )}
                       </svg>
@@ -614,42 +635,21 @@ export const Analytics: React.FC = () => {
                         >
                           <div className="tooltip-header">{historyData[hoveredIndex].time}</div>
                           <div className="tooltip-body">
-                            {visibleTemp && (
-                              <div className="tooltip-row">
-                                <span className="indicator-dot temp"></span>
-                                <span className="tooltip-label">Nhiệt độ:</span>
-                                <span className="tooltip-val">
-                                  {historyData[hoveredIndex].temperature} °C
-                                </span>
-                              </div>
-                            )}
-                            {visibleHum && (
-                              <div className="tooltip-row">
-                                <span className="indicator-dot hum"></span>
-                                <span className="tooltip-label">Độ ẩm khí:</span>
-                                <span className="tooltip-val">
-                                  {historyData[hoveredIndex].humidity} %
-                                </span>
-                              </div>
-                            )}
-                            {visibleSoil && (
-                              <div className="tooltip-row">
-                                <span className="indicator-dot soil"></span>
-                                <span className="tooltip-label">Độ ẩm đất:</span>
-                                <span className="tooltip-val">
-                                  {historyData[hoveredIndex].soilMoisture} %
-                                </span>
-                              </div>
-                            )}
-                            {visibleLight && (
-                              <div className="tooltip-row">
-                                <span className="indicator-dot light"></span>
-                                <span className="tooltip-label">Ánh sáng:</span>
-                                <span className="tooltip-val">
-                                  {historyData[hoveredIndex].lightIntensity} lx
-                                </span>
-                              </div>
-                            )}
+                            {getActiveKeys().map((key) => {
+                              const conf = getSensorConfig(key);
+                              if (visibleKeys[key] === false) return null;
+                              const val = historyData[hoveredIndex][key];
+                              if (val === undefined || val === null) return null;
+                              return (
+                                <div key={`tooltip-row-${key}`} className="tooltip-row">
+                                  <span className="indicator-dot" style={{ backgroundColor: conf.color }}></span>
+                                  <span className="tooltip-label">{conf.label.split(' (')[0]}:</span>
+                                  <span className="tooltip-val">
+                                    {val} {conf.unit}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

@@ -168,6 +168,14 @@
   color: #d97706;            /* Amber-600 */
 }
 
+.floating-3d-card.theme-waterLevel {
+  background-color: #f3e8ff; /* Purple-50 */
+  border-color: #c084fc;     /* Purple-400 */
+}
+.floating-3d-card.theme-waterLevel span.material-symbols-outlined {
+  color: #9333ea;            /* Purple-600 */
+}
+
 /* Central Control Post */
 .central-control-post {
   position: absolute;

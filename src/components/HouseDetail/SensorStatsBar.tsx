@@ -55,11 +55,15 @@ export const SensorStatsBar: React.FC<SensorStatsBarProps> = ({
           <span>Số lượng: <strong>{countSensors('humidity')}</strong></span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--db-on-surface-variant)' }}>
-          <span className="material-symbols-outlined" style={{ color: '#4f46e5', fontSize: '20px' }}>water_drop</span>
+          <span className="material-symbols-outlined" style={{ color: '#4f46e5', fontSize: '20px' }}>opacity</span>
           <span>Số lượng: <strong>{countSensors('soilMoisture')}</strong></span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--db-on-surface-variant)' }}>
-          <span className="material-symbols-outlined" style={{ color: '#d97706', fontSize: '20px' }}>wb_sunny</span>
+          <span className="material-symbols-outlined" style={{ color: '#9333ea', fontSize: '20px' }}>water_drop</span>
+          <span>Số lượng: <strong>{countSensors('waterLevel')}</strong></span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--db-on-surface-variant)' }}>
+          <span className="material-symbols-outlined" style={{ color: '#d97706', fontSize: '20px' }}>light_mode</span>
           <span>Số lượng: <strong>{countSensors('lightIntensity')}</strong></span>
         </div>
       </div>
