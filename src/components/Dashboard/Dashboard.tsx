@@ -13,12 +13,8 @@ interface Device {
   name: string;
   deviceId: string;
   status: 'online' | 'offline';
-  latestTelemetry?: {
-    temperature?: number;
-    humidity?: number;
-    soilMoisture?: number;
-    lightIntensity?: number;
-  };
+  sensorPositions?: Record<string, { spaceX: number; spaceY: number; displayName?: string }>;
+  latestTelemetry?: Record<string, any>;
 }
 
 interface House {
@@ -173,22 +169,33 @@ export const Dashboard: React.FC = () => {
 
     onlineTelemetryDevices.forEach((d) => {
       const t = d.latestTelemetry;
-      if (t?.temperature !== undefined && t.temperature !== -127 && t.temperature !== -999) {
-        tempSum += t.temperature;
-        tempCount++;
-      }
-      if (t?.humidity !== undefined && t.humidity > 0 && t.humidity <= 100) {
-        humSum += t.humidity;
-        humCount++;
-      }
-      if (t?.soilMoisture !== undefined && t.soilMoisture >= 0 && t.soilMoisture <= 100) {
-        soilSum += t.soilMoisture;
-        soilCount++;
-      }
-      if (t?.lightIntensity !== undefined && t.lightIntensity >= 0) {
-        lightSum += t.lightIntensity;
-        lightCount++;
-      }
+      if (!t) return;
+
+      Object.entries(t).forEach(([key, val]) => {
+        if (typeof val !== 'number') return;
+
+        if (key.startsWith('temperature')) {
+          if (val !== -127 && val !== -999) {
+            tempSum += val;
+            tempCount++;
+          }
+        } else if (key.startsWith('humidity')) {
+          if (val > 0 && val <= 100) {
+            humSum += val;
+            humCount++;
+          }
+        } else if (key.startsWith('soilMoisture')) {
+          if (val >= 0 && val <= 100) {
+            soilSum += val;
+            soilCount++;
+          }
+        } else if (key.startsWith('lightIntensity')) {
+          if (val >= 0) {
+            lightSum += val;
+            lightCount++;
+          }
+        }
+      });
     });
 
     if (tempCount > 0) avgTemp = Math.round((tempSum / tempCount) * 100) / 100;
@@ -197,7 +204,89 @@ export const Dashboard: React.FC = () => {
     if (lightCount > 0) avgLight = Math.round((lightSum / lightCount) * 100) / 100;
   }
 
-  // Calculate average values completed, Oxi logic removed
+  // Helper to count physical components in Dashboard (Hướng B)
+  const getPhysicalCounts = () => {
+    let pumpCount = 0;
+    let dhtCount = 0;
+    let soilCount = 0;
+    let lightCount = 0;
+    let waterCount = 0;
+    let otherCount = 0;
+
+    devices.forEach((dev) => {
+      const lowerName = dev.name.toLowerCase();
+      const lowerId = dev.deviceId.toLowerCase();
+      
+      const telemetry = dev.latestTelemetry || {};
+      const positions = dev.sensorPositions || {};
+
+      // Check if this device is primarily a sensor node
+      const hasTelemetrySensors = Object.keys(telemetry).some(k => 
+        k.startsWith('temperature') || 
+        k.startsWith('humidity') || 
+        k.startsWith('soilMoisture') || 
+        k.startsWith('lightIntensity') || 
+        k.startsWith('waterLevel')
+      );
+      const hasPositionSensors = Object.keys(positions).length > 0;
+      const isSensorNameOrId = lowerName.includes('cảm biến') || lowerName.includes('sens') || lowerId.includes('sens');
+
+      const isSensorNode = hasTelemetrySensors || hasPositionSensors || isSensorNameOrId;
+
+      if (!isSensorNode) {
+        // Actuator node or general node
+        const isPumpNode = lowerName.includes('bơm') || lowerName.includes('pump') || lowerId.includes('pump');
+        if (isPumpNode) {
+          pumpCount++;
+        } else {
+          otherCount++;
+        }
+      } else {
+        // Count physical sensors plugged into this board
+        // Check for DHT 1
+        const hasDht1 = (telemetry.temperature !== undefined || telemetry.temperature1 !== undefined || telemetry.humidity !== undefined || telemetry.humidity1 !== undefined) ||
+                        (positions.temperature !== undefined || positions.temperature1 !== undefined || positions.humidity !== undefined || positions.humidity1 !== undefined);
+        if (hasDht1) dhtCount++;
+
+        // Check for DHT 2
+        const hasDht2 = (telemetry.temperature2 !== undefined || telemetry.humidity2 !== undefined) ||
+                        (positions.temperature2 !== undefined || positions.humidity2 !== undefined);
+        if (hasDht2) dhtCount++;
+
+        // Check for Soil 1
+        const hasSoil1 = (telemetry.soilMoisture !== undefined || telemetry.soilMoisture1 !== undefined) ||
+                         (positions.soilMoisture !== undefined || positions.soilMoisture1 !== undefined);
+        if (hasSoil1) soilCount++;
+
+        // Check for Soil 2
+        const hasSoil2 = telemetry.soilMoisture2 !== undefined || positions.soilMoisture2 !== undefined;
+        if (hasSoil2) soilCount++;
+
+        // Check for Light 1
+        const hasLight1 = (telemetry.lightIntensity !== undefined || telemetry.lightIntensity1 !== undefined) ||
+                          (positions.lightIntensity !== undefined || positions.lightIntensity1 !== undefined);
+        if (hasLight1) lightCount++;
+
+        // Check for Light 2
+        const hasLight2 = telemetry.lightIntensity2 !== undefined || positions.lightIntensity2 !== undefined;
+        if (hasLight2) lightCount++;
+
+        // Check for Water 1
+        const hasWater1 = (telemetry.waterLevel !== undefined || telemetry.waterLevel1 !== undefined) ||
+                          (positions.waterLevel !== undefined || positions.waterLevel1 !== undefined);
+        if (hasWater1) waterCount++;
+
+        // Check for Water 2
+        const hasWater2 = telemetry.waterLevel2 !== undefined || positions.waterLevel2 !== undefined;
+        if (hasWater2) waterCount++;
+      }
+    });
+
+    const total = pumpCount + dhtCount + soilCount + lightCount + waterCount + otherCount;
+    return { total, pumpCount, dhtCount, soilCount, lightCount, waterCount, otherCount };
+  };
+
+  const stats = getPhysicalCounts();
 
   // Check alert conditions for sensor cards
   const activeAlertsForHouse = alerts.filter((a) => !a.resolved);
@@ -417,33 +506,24 @@ export const Dashboard: React.FC = () => {
     );
   };
 
-  // Device Statistics count helper
-  const isPump = (d: Device) =>
-    d.name.toLowerCase().includes('bơm') ||
-    d.name.toLowerCase().includes('pump') ||
-    d.deviceId.toLowerCase().includes('pump');
-
-  const pumpCount = devices.filter((d) => isPump(d)).length;
-  const tempCount = devices.filter((d) => d.name.toLowerCase().includes('nhiệt độ') || d.name.toLowerCase().includes('temp') || d.name.toLowerCase().includes('nd')).length;
-  const humCount = devices.filter((d) => d.name.toLowerCase().includes('độ ẩm') || d.name.toLowerCase().includes('hum') || d.name.toLowerCase().includes('da')).length;
-  const otherCount = Math.max(0, devices.length - pumpCount - tempCount - humCount);
-
-  // Donut SVG Arc calculation helper
+  // Donut SVG Arc calculation helper using Hướng B physical counts
   const renderSVGDonut = () => {
-    const total = devices.length;
+    const total = stats.total;
     if (total === 0) {
       return (
-        <svg width="140" height="140" viewBox="0 0 80 80">
+        <svg width="100%" height="100%" viewBox="0 0 80 80">
           <circle cx="40" cy="40" r="25" fill="none" stroke="#e0e0e0" strokeWidth="8" />
         </svg>
       );
     }
 
     const segments = [
-      { count: pumpCount, color: '#4285f4', label: 'Máy bơm' },
-      { count: tempCount, color: '#ea4335', label: 'Cảm biến nhiệt độ' },
-      { count: humCount, color: '#fbcb05', label: 'Cảm biến độ ẩm' },
-      { count: otherCount, color: '#9aa0a6', label: 'Thiết bị khác' }
+      { count: stats.pumpCount, color: '#4285f4', label: 'Máy bơm' },
+      { count: stats.dhtCount, color: '#ea4335', label: 'Cảm biến nhiệt ẩm' },
+      { count: stats.soilCount, color: '#fbcb05', label: 'Cảm biến độ ẩm đất' },
+      { count: stats.lightCount, color: '#34a853', label: 'Cảm biến ánh sáng' },
+      { count: stats.waterCount, color: '#00acc1', label: 'Cảm biến mực nước' },
+      { count: stats.otherCount, color: '#9aa0a6', label: 'Thiết bị khác' }
     ].filter((s) => s.count > 0);
 
     const radius = 25;
@@ -451,7 +531,7 @@ export const Dashboard: React.FC = () => {
     let accumulatedPercent = 0;
 
     return (
-      <svg width="140" height="140" viewBox="0 0 80 80">
+      <svg width="100%" height="100%" viewBox="0 0 80 80">
         {segments.map((seg, idx) => {
           const percent = (seg.count / total) * 100;
           const strokeDashoffset = circumference - (circumference * percent) / 100;
@@ -719,7 +799,7 @@ export const Dashboard: React.FC = () => {
                 <div className="donut-chart-container">
                   {renderSVGDonut()}
                   <div className="donut-center-text">
-                    <span className="donut-center-num">{devices.length}</span>
+                    <span className="donut-center-num">{stats.total}</span>
                     <span className="donut-center-lbl">Thiết bị</span>
                   </div>
                 </div>
@@ -731,34 +811,52 @@ export const Dashboard: React.FC = () => {
                       <span className="legend-color-dot" style={{ backgroundColor: '#4285f4' }}></span>
                       <span>Máy bơm</span>
                     </div>
-                    <span className="legend-value">{pumpCount}</span>
+                    <span className="legend-value">{stats.pumpCount}</span>
                   </div>
 
-                  {/* Item 2: Temperature */}
+                  {/* Item 2: DHT */}
                   <div className="legend-item">
                     <div className="legend-label-group">
                       <span className="legend-color-dot" style={{ backgroundColor: '#ea4335' }}></span>
-                      <span>Cảm biến nhiệt độ</span>
+                      <span>Cảm biến nhiệt ẩm</span>
                     </div>
-                    <span className="legend-value">{tempCount}</span>
+                    <span className="legend-value">{stats.dhtCount}</span>
                   </div>
 
-                  {/* Item 3: Humidity */}
+                  {/* Item 3: Soil Moisture */}
                   <div className="legend-item">
                     <div className="legend-label-group">
                       <span className="legend-color-dot" style={{ backgroundColor: '#fbcb05' }}></span>
-                      <span>Cảm biến độ ẩm</span>
+                      <span>Cảm biến độ ẩm đất</span>
                     </div>
-                    <span className="legend-value">{humCount}</span>
+                    <span className="legend-value">{stats.soilCount}</span>
                   </div>
 
-                  {/* Item 4: Others */}
+                  {/* Item 4: Light */}
+                  <div className="legend-item">
+                    <div className="legend-label-group">
+                      <span className="legend-color-dot" style={{ backgroundColor: '#34a853' }}></span>
+                      <span>Cảm biến ánh sáng</span>
+                    </div>
+                    <span className="legend-value">{stats.lightCount}</span>
+                  </div>
+
+                  {/* Item 5: Water Level */}
+                  <div className="legend-item">
+                    <div className="legend-label-group">
+                      <span className="legend-color-dot" style={{ backgroundColor: '#00acc1' }}></span>
+                      <span>Cảm biến mực nước</span>
+                    </div>
+                    <span className="legend-value">{stats.waterCount}</span>
+                  </div>
+
+                  {/* Item 6: Others */}
                   <div className="legend-item">
                     <div className="legend-label-group">
                       <span className="legend-color-dot" style={{ backgroundColor: '#9aa0a6' }}></span>
                       <span>Thiết bị khác</span>
                     </div>
-                    <span className="legend-value">{otherCount}</span>
+                    <span className="legend-value">{stats.otherCount}</span>
                   </div>
                 </div>
               </div>

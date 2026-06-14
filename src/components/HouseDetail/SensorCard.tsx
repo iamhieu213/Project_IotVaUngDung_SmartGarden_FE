@@ -33,6 +33,15 @@ export const SensorCard: React.FC<SensorCardProps> = ({
   handleSensorMouseDown,
   handleSensorDoubleClick,
 }) => {
+  const getBaseSensorKey = (key: string) => {
+    if (key.startsWith('temperature')) return 'temperature';
+    if (key.startsWith('humidity')) return 'humidity';
+    if (key.startsWith('soilMoisture')) return 'soilMoisture';
+    if (key.startsWith('lightIntensity')) return 'lightIntensity';
+    if (key.startsWith('waterLevel')) return 'waterLevel';
+    return key;
+  };
+
   return (
     <div
       key={`sensor-${device.id}-${sensorKey}`}
@@ -96,7 +105,7 @@ export const SensorCard: React.FC<SensorCardProps> = ({
       )}
 
       <div 
-        className={`floating-3d-card theme-${sensorKey} ${!isSensorOnline ? 'alert-border' : ''}`}
+        className={`floating-3d-card theme-${getBaseSensorKey(sensorKey)} ${!isSensorOnline ? 'alert-border' : ''}`}
         onMouseDown={(e) => handleSensorMouseDown(e, device.id, sensorKey)}
         onDoubleClick={(e) => handleSensorDoubleClick(e, device.id, sensorKey, pos.displayName || '', pos.spaceX, pos.spaceY)}
         style={{

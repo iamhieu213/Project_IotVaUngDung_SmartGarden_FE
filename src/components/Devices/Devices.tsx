@@ -81,60 +81,112 @@ export const Devices: React.FC = () => {
         const telemetry = dev.latestTelemetry;
         const positions = dev.sensorPositions || {};
 
-        const sensorSpecs = [
+        const baseSensors = [
           {
             key: 'temperature',
             name: 'Cảm biến Nhiệt độ',
             type: 'Nhiệt độ (°C)',
             icon: 'thermostat',
-            getValue: (t: any) => (t && t.temperature !== undefined && t.temperature !== -127 && t.temperature !== -999) ? `${t.temperature.toFixed(1).replace('.', ',')} °C` : '--',
-            hasValue: (t: any) => t && t.temperature !== undefined && t.temperature !== -127 && t.temperature !== -999
+            unit: '°C'
           },
           {
             key: 'humidity',
             name: 'Cảm biến Độ ẩm khí',
             type: 'Độ ẩm khí (%)',
             icon: 'humidity_percentage',
-            getValue: (t: any) => (t && t.humidity !== undefined && t.humidity > 0 && t.humidity <= 100) ? `${t.humidity.toFixed(1).replace('.', ',')} %` : '--',
-            hasValue: (t: any) => t && t.humidity !== undefined && t.humidity > 0 && t.humidity <= 100
+            unit: '%'
           },
           {
             key: 'soilMoisture',
             name: 'Cảm biến Độ ẩm đất',
             type: 'Độ ẩm đất (%)',
             icon: 'opacity',
-            getValue: (t: any) => (t && t.soilMoisture !== undefined && t.soilMoisture >= 0 && t.soilMoisture <= 100) ? `${t.soilMoisture.toFixed(1).replace('.', ',')} %` : '--',
-            hasValue: (t: any) => t && t.soilMoisture !== undefined && t.soilMoisture >= 0 && t.soilMoisture <= 100
+            unit: '%'
+          },
+          {
+            key: 'waterLevel',
+            name: 'Cảm biến Mực nước',
+            type: 'Mực nước (cm)',
+            icon: 'water_drop',
+            unit: 'cm'
           },
           {
             key: 'lightIntensity',
             name: 'Cảm biến Ánh sáng',
             type: 'Ánh sáng (lux)',
             icon: 'light_mode',
-            getValue: (t: any) => (t && t.lightIntensity !== undefined && t.lightIntensity >= 0) ? `${Math.round(t.lightIntensity)} lux` : '--',
-            hasValue: (t: any) => t && t.lightIntensity !== undefined && t.lightIntensity >= 0
+            unit: 'lux'
           }
         ];
 
-        sensorSpecs.forEach((spec) => {
-          const hasPosition = positions[spec.key] !== undefined;
-          const shouldShow = Object.keys(positions).length > 0 ? hasPosition : true;
+        baseSensors.forEach((spec) => {
+          // 1. Kiểm tra cảm biến số 1 (key thường hoặc key có số 1)
+          const key1 = (telemetry && telemetry[spec.key] !== undefined) 
+            ? spec.key 
+            : (positions && positions[spec.key] !== undefined)
+              ? spec.key
+              : `${spec.key}1`;
+          const has1 = (telemetry && telemetry[key1] !== undefined) || (positions && positions[key1] !== undefined);
 
-          if (shouldShow) {
-            const customName = positions[spec.key]?.displayName || `${spec.name} (${dev.name})`;
+          if (has1) {
+            const customName = positions[key1]?.displayName || `${spec.name} 1 (${dev.name})`;
+            const rawVal = telemetry ? telemetry[key1] : undefined;
+            const isUnplugged = (rawVal === undefined || rawVal === -127 || rawVal === -999);
+            const valStr = !isUnplugged 
+              ? (spec.key === 'lightIntensity' || spec.key === 'waterLevel')
+                ? `${Math.round(rawVal)} ${spec.unit}`
+                : `${rawVal.toFixed(1).replace('.', ',')} ${spec.unit}`
+              : '--';
+
+            const compOffline = isOffline || isUnplugged;
+
             items.push({
-              id: `${dev.id}-${spec.key}`,
+              id: `${dev.id}-${key1}`,
               parentId: dev.id,
               parentDeviceId: dev.deviceId,
               parentName: dev.name,
               name: customName,
-              type: spec.type,
+              type: `${spec.name} 1 (${spec.unit})`,
               iconName: spec.icon,
-              value: spec.getValue(telemetry),
+              value: valStr,
               houseName,
-              status,
+              status: !compOffline,
               lastUpdate,
-              isOffline,
+              isOffline: compOffline,
+              thingsboardAccessToken: dev.thingsboardAccessToken,
+              rawTelemetry: telemetry
+            });
+          }
+
+          // 2. Kiểm tra cảm biến số 2 (key có số 2)
+          const key2 = `${spec.key}2`;
+          const has2 = (telemetry && telemetry[key2] !== undefined) || positions[key2] !== undefined;
+
+          if (has2) {
+            const customName = positions[key2]?.displayName || `${spec.name} 2 (${dev.name})`;
+            const rawVal = telemetry ? telemetry[key2] : undefined;
+            const isUnplugged = (rawVal === undefined || rawVal === -127 || rawVal === -999);
+            const valStr = !isUnplugged 
+              ? (spec.key === 'lightIntensity' || spec.key === 'waterLevel')
+                ? `${Math.round(rawVal)} ${spec.unit}`
+                : `${rawVal.toFixed(1).replace('.', ',')} ${spec.unit}`
+              : '--';
+
+            const compOffline = isOffline || isUnplugged;
+
+            items.push({
+              id: `${dev.id}-${key2}`,
+              parentId: dev.id,
+              parentDeviceId: dev.deviceId,
+              parentName: dev.name,
+              name: customName,
+              type: `${spec.name} 2 (${spec.unit})`,
+              iconName: spec.icon,
+              value: valStr,
+              houseName,
+              status: !compOffline,
+              lastUpdate,
+              isOffline: compOffline,
               thingsboardAccessToken: dev.thingsboardAccessToken,
               rawTelemetry: telemetry
             });
@@ -410,10 +462,97 @@ export const Devices: React.FC = () => {
     comp.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Stats calculation based on expanded components
-  const totalSensorsCount = componentItems.length;
-  const onlineSensorsCount = componentItems.filter((c) => c.status).length;
-  const offlineSensorsCount = componentItems.filter((c) => c.isOffline).length;
+  // Hàm tính toán số lượng cảm biến vật lý thực tế cắm vào (DHT22 tính là 1)
+  const getPhysicalSensorStats = (deviceList: any[]) => {
+    let total = 0;
+    let offline = 0;
+
+    deviceList.forEach((dev) => {
+      const telemetry = dev.latestTelemetry;
+      const positions = dev.sensorPositions || {};
+      const isDeviceOffline = dev.status === 'offline';
+
+      const checkSensor = (keys: string[]) => {
+        // Tìm xem có bất kỳ key nào tồn tại trong telemetry hoặc positions
+        const exists = keys.some(k => 
+          (telemetry && telemetry[k] !== undefined) || (positions && positions[k] !== undefined)
+        );
+        if (!exists) return null;
+
+        // Nếu tồn tại cảm biến vật lý đó, kiểm tra xem nó có bị offline/rút dây không
+        const isOffline = isDeviceOffline || keys.every(k => {
+          const rawVal = telemetry ? telemetry[k] : undefined;
+          return rawVal === undefined || rawVal === -127 || rawVal === -999;
+        });
+
+        return { isOffline };
+      };
+
+      // 1. DHT 1
+      const dht1 = checkSensor(['temperature', 'temperature1', 'humidity', 'humidity1']);
+      if (dht1) {
+        total++;
+        if (dht1.isOffline) offline++;
+      }
+
+      // 2. DHT 2
+      const dht2 = checkSensor(['temperature2', 'humidity2']);
+      if (dht2) {
+        total++;
+        if (dht2.isOffline) offline++;
+      }
+
+      // 3. Soil 1
+      const soil1 = checkSensor(['soilMoisture', 'soilMoisture1']);
+      if (soil1) {
+        total++;
+        if (soil1.isOffline) offline++;
+      }
+
+      // 4. Soil 2
+      const soil2 = checkSensor(['soilMoisture2']);
+      if (soil2) {
+        total++;
+        if (soil2.isOffline) offline++;
+      }
+
+      // 5. Water 1
+      const water1 = checkSensor(['waterLevel', 'waterLevel1']);
+      if (water1) {
+        total++;
+        if (water1.isOffline) offline++;
+      }
+
+      // 6. Water 2
+      const water2 = checkSensor(['waterLevel2']);
+      if (water2) {
+        total++;
+        if (water2.isOffline) offline++;
+      }
+
+      // 7. Light 1
+      const light1 = checkSensor(['lightIntensity', 'lightIntensity1', 'lightLevel']);
+      if (light1) {
+        total++;
+        if (light1.isOffline) offline++;
+      }
+
+      // 8. Light 2
+      const light2 = checkSensor(['lightIntensity2']);
+      if (light2) {
+        total++;
+        if (light2.isOffline) offline++;
+      }
+    });
+
+    return { total, offline };
+  };
+
+  // Tính toán số lượng dựa trên thiết bị vật lý thực tế cắm vào (Hướng B)
+  const sensorStats = getPhysicalSensorStats(rawDevices);
+  const totalSensorsCount = sensorStats.total;
+  const offlineSensorsCount = sensorStats.offline;
+  const onlineSensorsCount = totalSensorsCount - offlineSensorsCount;
   const activePercentage = totalSensorsCount > 0 ? Math.round((onlineSensorsCount / totalSensorsCount) * 100) : 0;
 
   return (
@@ -515,7 +654,7 @@ export const Devices: React.FC = () => {
                 </div>
                 <span className="metrics-badge primary">Hoạt động {activePercentage}%</span>
               </div>
-              <p className="metrics-title">Tổng số cảm biến & thiết bị</p>
+              <p className="metrics-title">Tổng số cảm biến vật lý</p>
               <p className="metrics-value">{totalSensorsCount}</p>
             </div>
             <div className="devices-metrics-card">
@@ -535,7 +674,7 @@ export const Devices: React.FC = () => {
                 </div>
                 <span className="metrics-badge error">Ngoại tuyến</span>
               </div>
-              <p className="metrics-title">Cảm biến ngoại tuyến</p>
+              <p className="metrics-title">Cảm biến vật lý ngoại tuyến</p>
               <p className="metrics-value error">{offlineSensorsCount}</p>
             </div>
           </div>

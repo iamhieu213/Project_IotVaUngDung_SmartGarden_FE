@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface RightStatusPanelProps {
   devices: any[];
@@ -10,6 +10,7 @@ interface RightStatusPanelProps {
   handleDeleteDevice: (id: string, name: string) => void;
   handleStartDragNewSensor: (e: React.MouseEvent, deviceId: string, sensorKey: string) => void;
   handleSensorDoubleClick: (e: React.MouseEvent | null, deviceId: string, sensorKey: string, currentName: string, spaceX: number, spaceY: number) => void;
+  handleDeleteSensorPosition?: (deviceId: string, sensorKey: string) => void;
   handleAddDevice: () => void;
   getSensorLucideIcon: (sensorKey: string) => React.ReactNode;
   isCollapsed: boolean;
@@ -25,6 +26,7 @@ export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
   handleDeleteDevice,
   handleStartDragNewSensor,
   handleSensorDoubleClick,
+  handleDeleteSensorPosition,
   handleAddDevice,
   getSensorLucideIcon,
   isCollapsed,
@@ -186,13 +188,27 @@ export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
                           const pos = device.sensorPositions?.[sensorKey];
                           const isPositioned = pos && pos.spaceX !== undefined && pos.spaceY !== undefined;
                           
+                          const getBaseSensorKey = (key: string) => {
+                            if (key.startsWith('temperature')) return 'temperature';
+                            if (key.startsWith('humidity')) return 'humidity';
+                            if (key.startsWith('soilMoisture')) return 'soilMoisture';
+                            if (key.startsWith('lightIntensity')) return 'lightIntensity';
+                            if (key.startsWith('waterLevel')) return 'waterLevel';
+                            return key;
+                          };
+
+                          const baseKey = getBaseSensorKey(sensorKey);
                           const SENSOR_LABELS: Record<string, string> = {
                             temperature: 'Nhiệt độ',
                             humidity: 'Độ ẩm KK',
                             soilMoisture: 'Độ ẩm đất',
                             lightIntensity: 'Ánh sáng',
+                            waterLevel: 'Mực nước',
                           };
-                          const labelText = pos?.displayName || `${SENSOR_LABELS[sensorKey] || sensorKey}`;
+                          
+                          const suffix = sensorKey.replace(baseKey, '');
+                          const defaultLabel = `${SENSOR_LABELS[baseKey] || baseKey}${suffix ? ' ' + suffix : ''}`;
+                          const labelText = pos?.displayName || defaultLabel;
 
                           return (
                             <div key={sensorKey} style={{
@@ -228,30 +244,56 @@ export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
                               </div>
                               
                               {isPositioned && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSensorDoubleClick(null, device.id, sensorKey, pos?.displayName || '', pos.spaceX, pos.spaceY);
-                                  }}
-                                  title="Đổi tên cảm biến"
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--db-primary)',
-                                    cursor: 'pointer',
-                                    padding: '2px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    borderRadius: '4px',
-                                    transition: 'background-color 0.2s'
-                                  }}
-                                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0, 108, 73, 0.08)')}
-                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                >
-                                  <Pencil size={11} />
-                                </button>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSensorDoubleClick(null, device.id, sensorKey, pos?.displayName || '', pos.spaceX, pos.spaceY);
+                                    }}
+                                    title="Đổi tên cảm biến"
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'var(--db-primary)',
+                                      cursor: 'pointer',
+                                      padding: '2px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      borderRadius: '4px',
+                                      transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0, 108, 73, 0.08)')}
+                                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  >
+                                    <Pencil size={11} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteSensorPosition?.(device.id, sensorKey);
+                                    }}
+                                    title="Xóa cảm biến khỏi thiết bị"
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'var(--db-error, #ef4444)',
+                                      cursor: 'pointer',
+                                      padding: '2px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      borderRadius: '4px',
+                                      transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)')}
+                                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
                               )}
                             </div>
                           );
