@@ -82,6 +82,9 @@ export const HouseDetail: React.FC = () => {
     isFlatView,
     isStatusPanelCollapsed,
     setIsStatusPanelCollapsed,
+    handleTogglePump,
+    presetsList,
+    handleAssignPreset,
   } = useHouseDetailState();
 
   return (
@@ -229,8 +232,10 @@ export const HouseDetail: React.FC = () => {
                   return String(val);
                 };
 
-                return Object.entries(positions).map(([sensorKey, pos]: [string, any]) => {
-                  if (pos.spaceX === undefined || pos.spaceY === undefined) return null;
+                return Object.entries(positions)
+                  .filter(([sensorKey]) => !sensorKey.startsWith('waterLevel'))
+                  .map(([sensorKey, pos]: [string, any]) => {
+                    if (pos.spaceX === undefined || pos.spaceY === undefined) return null;
 
                   const baseKey = getBaseSensorKey(sensorKey);
                   const icon = SENSOR_ICONS[baseKey] || 'sensors';
@@ -297,6 +302,9 @@ export const HouseDetail: React.FC = () => {
             getSensorLucideIcon={getSensorLucideIcon}
             isCollapsed={isStatusPanelCollapsed}
             onToggleCollapse={() => setIsStatusPanelCollapsed(!isStatusPanelCollapsed)}
+            handleTogglePump={handleTogglePump}
+            presetsList={presetsList}
+            handleAssignPreset={handleAssignPreset}
           />
         </div>
       </main>

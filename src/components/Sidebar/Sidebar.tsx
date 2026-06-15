@@ -27,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Tổng quan', icon: 'dashboard', path: '/dashboard' },
     { id: 'mushroom-houses', label: 'Nhà nấm', icon: 'home_work', path: '/houses' },
     { id: 'devices', label: 'Thiết bị', icon: 'memory', path: '/devices' },
+    { id: 'presets', label: 'Cấu hình bơm', icon: 'tune', path: '/presets' },
     { id: 'analytics', label: 'Phân tích', icon: 'analytics', path: '/analytics' },
     { id: 'alerts', label: 'Cảnh báo', icon: 'notifications_active', path: '/alerts' },
   ];
