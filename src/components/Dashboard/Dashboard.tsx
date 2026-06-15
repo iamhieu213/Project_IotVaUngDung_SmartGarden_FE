@@ -210,7 +210,6 @@ export const Dashboard: React.FC = () => {
     let dhtCount = 0;
     let soilCount = 0;
     let lightCount = 0;
-    let waterCount = 0;
     let otherCount = 0;
 
     devices.forEach((dev) => {
@@ -225,8 +224,7 @@ export const Dashboard: React.FC = () => {
         k.startsWith('temperature') || 
         k.startsWith('humidity') || 
         k.startsWith('soilMoisture') || 
-        k.startsWith('lightIntensity') || 
-        k.startsWith('waterLevel')
+        k.startsWith('lightIntensity')
       );
       const hasPositionSensors = Object.keys(positions).length > 0;
       const isSensorNameOrId = lowerName.includes('cảm biến') || lowerName.includes('sens') || lowerId.includes('sens');
@@ -270,20 +268,11 @@ export const Dashboard: React.FC = () => {
         // Check for Light 2
         const hasLight2 = telemetry.lightIntensity2 !== undefined || positions.lightIntensity2 !== undefined;
         if (hasLight2) lightCount++;
-
-        // Check for Water 1
-        const hasWater1 = (telemetry.waterLevel !== undefined || telemetry.waterLevel1 !== undefined) ||
-                          (positions.waterLevel !== undefined || positions.waterLevel1 !== undefined);
-        if (hasWater1) waterCount++;
-
-        // Check for Water 2
-        const hasWater2 = telemetry.waterLevel2 !== undefined || positions.waterLevel2 !== undefined;
-        if (hasWater2) waterCount++;
       }
     });
 
-    const total = pumpCount + dhtCount + soilCount + lightCount + waterCount + otherCount;
-    return { total, pumpCount, dhtCount, soilCount, lightCount, waterCount, otherCount };
+    const total = pumpCount + dhtCount + soilCount + lightCount + otherCount;
+    return { total, pumpCount, dhtCount, soilCount, lightCount, otherCount };
   };
 
   const stats = getPhysicalCounts();
@@ -522,7 +511,6 @@ export const Dashboard: React.FC = () => {
       { count: stats.dhtCount, color: '#ea4335', label: 'Cảm biến nhiệt ẩm' },
       { count: stats.soilCount, color: '#fbcb05', label: 'Cảm biến độ ẩm đất' },
       { count: stats.lightCount, color: '#34a853', label: 'Cảm biến ánh sáng' },
-      { count: stats.waterCount, color: '#00acc1', label: 'Cảm biến mực nước' },
       { count: stats.otherCount, color: '#9aa0a6', label: 'Thiết bị khác' }
     ].filter((s) => s.count > 0);
 
@@ -841,16 +829,7 @@ export const Dashboard: React.FC = () => {
                     <span className="legend-value">{stats.lightCount}</span>
                   </div>
 
-                  {/* Item 5: Water Level */}
-                  <div className="legend-item">
-                    <div className="legend-label-group">
-                      <span className="legend-color-dot" style={{ backgroundColor: '#00acc1' }}></span>
-                      <span>Cảm biến mực nước</span>
-                    </div>
-                    <span className="legend-value">{stats.waterCount}</span>
-                  </div>
-
-                  {/* Item 6: Others */}
+                  {/* Item 5: Others */}
                   <div className="legend-item">
                     <div className="legend-label-group">
                       <span className="legend-color-dot" style={{ backgroundColor: '#9aa0a6' }}></span>

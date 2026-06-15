@@ -10,6 +10,7 @@ import { Alerts } from './components/Alerts/Alerts';
 import { ForgotPassword } from './components/ForgotPassword/ForgotPassword';
 import { ResetPassword } from './components/ResetPassword/ResetPassword';
 import { Analytics } from './components/Analytics/Analytics';
+import { PresetsPage } from './components/Presets/PresetsPage';
 
 
 // Import AuthProvider và ProtectedRoute
@@ -69,6 +70,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Analytics />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/presets" 
+            element={
+              <ProtectedRoute>
+                <PresetsPage />
               </ProtectedRoute>
             } 
           />

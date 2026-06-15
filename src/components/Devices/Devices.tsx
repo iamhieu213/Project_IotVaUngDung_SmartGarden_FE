@@ -60,6 +60,7 @@ export const Devices: React.FC = () => {
   const [rawDevices, setRawDevices] = useState<any[]>([]);
   const [unregisteredIds, setUnregisteredIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [presetsList, setPresetsList] = useState<any[]>([]);
 
   // Transform physical ESP32 boards to individual sensor and actuator component items
   const getComponentItems = (deviceList: any[]): ComponentItem[] => {
@@ -102,13 +103,6 @@ export const Devices: React.FC = () => {
             type: 'Độ ẩm đất (%)',
             icon: 'opacity',
             unit: '%'
-          },
-          {
-            key: 'waterLevel',
-            name: 'Cảm biến Mực nước',
-            type: 'Mực nước (cm)',
-            icon: 'water_drop',
-            unit: 'cm'
           },
           {
             key: 'lightIntensity',
@@ -270,6 +264,17 @@ export const Devices: React.FC = () => {
     }
   };
 
+  const fetchPresetsList = async () => {
+    try {
+      const res = await api.get('/presets');
+      if (res.data.success) {
+        setPresetsList(res.data.data);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách preset:', err);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     const init = async () => {
@@ -287,6 +292,7 @@ export const Devices: React.FC = () => {
         console.error('Lỗi khi khởi tạo danh sách nhà nấm:', err);
       }
       fetchUnregistered();
+      fetchPresetsList();
     };
     init();
   }, []);
@@ -516,19 +522,7 @@ export const Devices: React.FC = () => {
         if (soil2.isOffline) offline++;
       }
 
-      // 5. Water 1
-      const water1 = checkSensor(['waterLevel', 'waterLevel1']);
-      if (water1) {
-        total++;
-        if (water1.isOffline) offline++;
-      }
 
-      // 6. Water 2
-      const water2 = checkSensor(['waterLevel2']);
-      if (water2) {
-        total++;
-        if (water2.isOffline) offline++;
-      }
 
       // 7. Light 1
       const light1 = checkSensor(['lightIntensity', 'lightIntensity1', 'lightLevel']);
@@ -824,6 +818,56 @@ export const Devices: React.FC = () => {
                       {selectedComponent.thingsboardAccessToken || 'Không khả dụng'}
                     </p>
                   </div>
+                  {(() => {
+                    const parentDevice = rawDevices.find((d) => d.id === selectedComponent.parentId);
+                    const currentPresetId = parentDevice?.activePreset || '';
+                    return (
+                      <div className="config-item-box" style={{ gridColumn: 'span 2' }}>
+                        <p className="config-item-lbl">Cấu hình tự động (Preset)</p>
+                        <select
+                          value={currentPresetId}
+                          onChange={async (e) => {
+                            const val = e.target.value;
+                            try {
+                              const res = await api.put(`/devices/${selectedComponent.parentId}/preset`, { presetId: val || null });
+                              if (res.data.success) {
+                                Swal.fire({
+                                  icon: 'success',
+                                  title: 'Cập nhật thành công',
+                                  text: 'Đã gán cấu hình tự động cho thiết bị.',
+                                  timer: 1500,
+                                  showConfirmButton: false
+                                });
+                                setRawDevices(prev => prev.map(d => d.id === selectedComponent.parentId ? { ...d, activePreset: val || null } : d));
+                              }
+                            } catch (err: any) {
+                              Swal.fire({
+                                icon: 'error',
+                                title: 'Thất bại',
+                                text: err.response?.data?.message || 'Có lỗi xảy ra khi gán preset.'
+                              });
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--db-outline-variant)',
+                            marginTop: '6px',
+                            fontSize: '13px',
+                            backgroundColor: 'var(--db-surface-container-lowest)',
+                            color: 'var(--db-on-surface)',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <option value="">Điều khiển thủ công (Không tự động)</option>
+                          {presetsList.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

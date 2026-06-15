@@ -235,8 +235,8 @@ export const Analytics: React.FC = () => {
   // Maximum scales for normalization
   const scaleTemp = 50; // Temp: 0 - 50°C
   const scaleHum = 100; // Hum: 0 - 100%
-  const scaleSoil = 100; // Soil: 0 - 100%
-  const scaleLight = 2000; // Light: 0 - 2000 lux
+  // const scaleSoil = 100; // Soil: 0 - 100%
+  // const scaleLight = 2000; // Light: 0 - 2000 lux
 
   // Helper to calculate Y coordinates on SVG
   const getY = (val: number, maxVal: number) => {

@@ -20,6 +20,7 @@ export const useHouseDetailState = () => {
   const [devices, setDevices] = useState<any[]>([]);
   const [expandedDevices, setExpandedDevices] = useState<Record<string, boolean>>({});
   const [selectedSensor, setSelectedSensor] = useState<{ deviceId: string; sensorKey: string } | null>(null);
+  const [presetsList, setPresetsList] = useState<any[]>([]);
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
 
   // Collapsed Sidebar state
@@ -79,9 +80,20 @@ export const useHouseDetailState = () => {
     }
   };
 
+  const fetchPresetsList = async () => {
+    try {
+      const response = await api.get('/presets');
+      if (response.data.success) {
+        setPresetsList(response.data.data);
+      }
+    } catch (err: any) {
+      console.error('Lỗi khi tải danh sách preset:', err);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
-      await Promise.all([fetchHouseDetail(), fetchDevices()]);
+      await Promise.all([fetchHouseDetail(), fetchDevices(), fetchPresetsList()]);
     };
     loadData();
   }, [houseId]);
@@ -458,6 +470,43 @@ export const useHouseDetailState = () => {
     ? (totalTemperature / temperatureCount).toFixed(1)
     : null;
 
+  const handleTogglePump = async (deviceId: string, currentAction: 'on' | 'off') => {
+    const nextAction = currentAction === 'on' ? 'off' : 'on';
+    const actionText = nextAction === 'on' ? 'bật' : 'tắt';
+
+    try {
+      const response = await api.post(`/devices/${deviceId}/control`, {
+        type: 'pump',
+        action: nextAction
+      });
+
+      if (response.data.success) {
+        Swal.fire({
+          icon: 'success',
+          title: `Đã gửi lệnh ${actionText} máy bơm`,
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+        });
+
+        setDevices((prev) =>
+          prev.map((d) =>
+            d.id === deviceId ? { ...d, pumpState: nextAction } : d
+          )
+        );
+      }
+    } catch (err: any) {
+      console.error(`Lỗi khi ${actionText} máy bơm:`, err);
+      Swal.fire({
+        icon: 'error',
+        title: `Điều khiển máy bơm thất bại`,
+        text: err.response?.data?.message || err.message,
+      });
+    }
+  };
+
   return {
     houseName,
     houseInfo,
@@ -503,5 +552,37 @@ export const useHouseDetailState = () => {
     averageTemperature,
     isStatusPanelCollapsed,
     setIsStatusPanelCollapsed,
+    handleTogglePump,
+    presetsList,
+    handleAssignPreset: async (deviceId: string, presetId: string | null) => {
+      try {
+        const response = await api.put(`/devices/${deviceId}/preset`, { presetId });
+        if (response.data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Cập nhật preset thành công',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+          });
+
+          // Cập nhật state thiết bị ở local
+          setDevices((prev) =>
+            prev.map((d) =>
+              d.id === deviceId ? { ...d, activePreset: presetId } : d
+            )
+          );
+        }
+      } catch (err: any) {
+        console.error('Lỗi khi gán preset:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gán preset thất bại',
+          text: err.response?.data?.message || err.message,
+        });
+      }
+    },
   };
 };

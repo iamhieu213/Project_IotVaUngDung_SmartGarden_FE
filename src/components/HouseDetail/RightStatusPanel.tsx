@@ -15,6 +15,9 @@ interface RightStatusPanelProps {
   getSensorLucideIcon: (sensorKey: string) => React.ReactNode;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  handleTogglePump: (deviceId: string, currentAction: 'on' | 'off') => void;
+  presetsList?: any[];
+  handleAssignPreset?: (deviceId: string, presetId: string | null) => void;
 }
 
 export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
@@ -31,6 +34,9 @@ export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
   getSensorLucideIcon,
   isCollapsed,
   onToggleCollapse,
+  handleTogglePump,
+  presetsList = [],
+  handleAssignPreset,
 }) => {
   return (
     <aside className={`status-panel ${isCollapsed ? 'collapsed' : ''}`}>
@@ -164,15 +170,16 @@ export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
                     const isExpanded = expandedDevices[device.id];
                     if (!isExpanded) return null;
 
+                    const isOnline = device.status === 'online';
                     const telemetryKeys = device.latestTelemetry
-                      ? Object.keys(device.latestTelemetry).filter((k: string) => k !== 'createdAt')
+                      ? Object.keys(device.latestTelemetry).filter((k: string) => k !== 'createdAt' && !k.startsWith('waterLevel'))
                       : [];
                     const positionedKeys = device.sensorPositions
-                      ? Object.keys(device.sensorPositions)
+                      ? Object.keys(device.sensorPositions).filter((k: string) => !k.startsWith('waterLevel'))
                       : [];
                     const availableSensors = Array.from(new Set([...telemetryKeys, ...positionedKeys]));
 
-                    if (availableSensors.length === 0) return null;
+                    if (availableSensors.length === 0 && !isOnline) return null;
 
                     return (
                       <div className="device-sub-sensors" style={{
@@ -298,6 +305,86 @@ export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
                             </div>
                           );
                         })}
+
+                        {/* Widget điều khiển máy bơm */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          padding: '8px 0',
+                          marginTop: '8px',
+                          borderTop: '1px solid var(--db-outline-variant)',
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--db-primary)' }}>water_drop</span>
+                              <span style={{ fontSize: '11px', fontWeight: 600 }}>Máy bơm nước</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isOnline) {
+                                  handleTogglePump(device.id, device.pumpState || 'off');
+                                }
+                              }}
+                              disabled={!isOnline}
+                              style={{
+                                padding: '4px 12px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                backgroundColor: !isOnline 
+                                  ? '#94a3b8' 
+                                  : device.pumpState === 'on' 
+                                    ? '#ef4444' 
+                                    : 'var(--db-primary)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: isOnline ? 'pointer' : 'not-allowed',
+                                transition: 'opacity 0.2s',
+                                opacity: isOnline ? 1 : 0.7
+                              }}
+                              onMouseOver={(e) => {
+                                if (isOnline) e.currentTarget.style.opacity = '0.9';
+                              }}
+                              onMouseOut={(e) => {
+                                if (isOnline) e.currentTarget.style.opacity = '1';
+                              }}
+                              title={!isOnline ? "Thiết bị đang ngoại tuyến, không thể điều khiển bằng tay" : ""}
+                            >
+                              {!isOnline ? 'OFFLINE' : device.pumpState === 'on' ? 'TẮT BƠM' : 'BẬT BƠM'}
+                            </button>
+                          </div>
+                          
+                          {/* Dropdown chọn Preset */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <label style={{ fontSize: '10px', fontWeight: 600, color: 'var(--db-on-surface-variant)' }}>Chế độ tự động (Preset):</label>
+                            <select
+                              value={device.activePreset || ''}
+                              onChange={(e) => handleAssignPreset?.(device.id, e.target.value || null)}
+                              style={{
+                                width: '100%',
+                                padding: '6px 8px',
+                                fontSize: '11px',
+                                borderRadius: '4px',
+                                border: '1px solid var(--db-outline-variant)',
+                                backgroundColor: 'var(--db-surface-container-lowest)',
+                                color: 'var(--db-on-surface)',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                              }}
+                            >
+                              <option value="">Điều khiển thủ công (Không tự động)</option>
+                              {presetsList.map((p: any) => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
                       </div>
                     );
                   })()}
