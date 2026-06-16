@@ -7,6 +7,7 @@ import { NotificationDropdown } from '../NotificationDropdown/NotificationDropdo
 import Swal from 'sweetalert2';
 import api from '../../utils/api';
 import { io } from 'socket.io-client';
+import { ChatAI } from '../ChatAI/ChatAI';
 
 interface Device {
   id: string;
@@ -726,8 +727,8 @@ export const Dashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {devices.map((d) => (
-                      <tr key={d.id}>
+                    {devices.map((d, index) => (
+                      <tr key={d.id || (d as any)._id || index}>
                         <td>{d.name}</td>
                         <td>
                           <span className={`status-text ${d.status === 'online' ? 'active' : 'inactive'}`}>
@@ -761,8 +762,8 @@ export const Dashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {alerts.slice(0, 10).map((a) => (
-                      <tr key={a._id}>
+                    {alerts.slice(0, 10).map((a, index) => (
+                      <tr key={a._id || index}>
                         <td style={{ fontWeight: 'bold' }}>{a.deviceId.substring(0, 6).toUpperCase()}</td>
                         <td className="alert-message-text">{a.message}</td>
                         <td className="alert-time-text">{formatAlertTime(a.createdAt)}</td>
@@ -848,6 +849,9 @@ export const Dashboard: React.FC = () => {
       <button type="button" className="fab-btn" title="Thêm thiết bị" onClick={() => navigate('/devices')}>
         <span className="fab-icon">add</span>
       </button>
+
+      {/* Trợ lý Chatbot AI */}
+      <ChatAI currentHouseId={selectedHouseId} />
     </div>
   );
 };
