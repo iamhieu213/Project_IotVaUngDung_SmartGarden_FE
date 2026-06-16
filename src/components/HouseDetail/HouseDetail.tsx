@@ -2,7 +2,7 @@ import React from 'react';
 import Sidebar from '../Sidebar/Sidebar';
 import './HouseDetail.css';
 import { Thermometer, Droplets, Sun, HelpCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { NotificationDropdown } from '../NotificationDropdown/NotificationDropdown';
 import { useAuth } from '../../context/AuthContext';
 // Import sub-components
@@ -10,6 +10,7 @@ import { SensorStatsBar } from './SensorStatsBar';
 import { FarmHudControls } from './FarmHudControls';
 import { SensorCard } from './SensorCard';
 import { RightStatusPanel } from './RightStatusPanel';
+import { ChatAI } from '../ChatAI/ChatAI';
 
 // Import custom hook
 import { useHouseDetailState } from './useHouseDetailState';
@@ -44,6 +45,7 @@ const getSensorLucideIcon = (sensorKey: string) => {
 
 export const HouseDetail: React.FC = () => {
   const { user } = useAuth();
+  const { id } = useParams();
   const {
     houseName,
     houseInfo,
@@ -308,6 +310,9 @@ export const HouseDetail: React.FC = () => {
           />
         </div>
       </main>
+
+      {/* Trợ lý Chatbot AI */}
+      <ChatAI currentHouseId={id} />
     </div>
   );
 };
