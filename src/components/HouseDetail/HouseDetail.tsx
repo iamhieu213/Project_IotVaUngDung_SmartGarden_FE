@@ -230,12 +230,11 @@ export const HouseDetail: React.FC = () => {
                   if (base === 'humidity') return `${val}%`;
                   if (base === 'soilMoisture') return `${val}%`;
                   if (base === 'lightIntensity') return `${val} lx`;
-                  if (base === 'waterLevel') return `${val} cm`;
+                  if (base === 'waterLevel') return `${val}mm`;
                   return String(val);
                 };
 
                 return Object.entries(positions)
-                  .filter(([sensorKey]) => !sensorKey.startsWith('waterLevel'))
                   .map(([sensorKey, pos]: [string, any]) => {
                     if (pos.spaceX === undefined || pos.spaceY === undefined) return null;
 
