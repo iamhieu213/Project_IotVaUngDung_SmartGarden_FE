@@ -211,6 +211,7 @@ export const Dashboard: React.FC = () => {
     let dhtCount = 0;
     let soilCount = 0;
     let lightCount = 0;
+    let waterCount = 0;
     let otherCount = 0;
 
     devices.forEach((dev) => {
@@ -220,60 +221,57 @@ export const Dashboard: React.FC = () => {
       const telemetry = dev.latestTelemetry || {};
       const positions = dev.sensorPositions || {};
 
-      // Check if this device is primarily a sensor node
-      const hasTelemetrySensors = Object.keys(telemetry).some(k => 
-        k.startsWith('temperature') || 
-        k.startsWith('humidity') || 
-        k.startsWith('soilMoisture') || 
-        k.startsWith('lightIntensity')
-      );
-      const hasPositionSensors = Object.keys(positions).length > 0;
-      const isSensorNameOrId = lowerName.includes('cảm biến') || lowerName.includes('sens') || lowerId.includes('sens');
-
-      const isSensorNode = hasTelemetrySensors || hasPositionSensors || isSensorNameOrId;
-
-      if (!isSensorNode) {
-        // Actuator node or general node
-        const isPumpNode = lowerName.includes('bơm') || lowerName.includes('pump') || lowerId.includes('pump');
-        if (isPumpNode) {
-          pumpCount++;
-        } else {
-          otherCount++;
-        }
+      // 1. Kiểm tra máy bơm độc lập:
+      // Mặc định các mạch điều khiển (trừ khi được đặt tên là quạt/đèn chuyên biệt) đều quản lý 1 bơm nước.
+      const isNotPumpActuator = lowerName.includes('quạt') || lowerName.includes('fan') || lowerId.includes('fan') ||
+                                lowerName.includes('đèn') || lowerName.includes('led') || lowerId.includes('led');
+      if (!isNotPumpActuator) {
+        pumpCount++;
       } else {
-        // Count physical sensors plugged into this board
-        // Check for DHT 1
-        const hasDht1 = (telemetry.temperature !== undefined || telemetry.temperature1 !== undefined || telemetry.humidity !== undefined || telemetry.humidity1 !== undefined) ||
-                        (positions.temperature !== undefined || positions.temperature1 !== undefined || positions.humidity !== undefined || positions.humidity1 !== undefined);
-        if (hasDht1) dhtCount++;
-
-        // Check for DHT 2
-        const hasDht2 = (telemetry.temperature2 !== undefined || telemetry.humidity2 !== undefined) ||
-                        (positions.temperature2 !== undefined || positions.humidity2 !== undefined);
-        if (hasDht2) dhtCount++;
-
-        // Check for Soil 1
-        const hasSoil1 = (telemetry.soilMoisture !== undefined || telemetry.soilMoisture1 !== undefined) ||
-                         (positions.soilMoisture !== undefined || positions.soilMoisture1 !== undefined);
-        if (hasSoil1) soilCount++;
-
-        // Check for Soil 2
-        const hasSoil2 = telemetry.soilMoisture2 !== undefined || positions.soilMoisture2 !== undefined;
-        if (hasSoil2) soilCount++;
-
-        // Check for Light 1
-        const hasLight1 = (telemetry.lightIntensity !== undefined || telemetry.lightIntensity1 !== undefined) ||
-                          (positions.lightIntensity !== undefined || positions.lightIntensity1 !== undefined);
-        if (hasLight1) lightCount++;
-
-        // Check for Light 2
-        const hasLight2 = telemetry.lightIntensity2 !== undefined || positions.lightIntensity2 !== undefined;
-        if (hasLight2) lightCount++;
+        otherCount++;
       }
+
+      // 2. Kiểm tra các cảm biến vật lý đi kèm độc lập:
+      // Check for DHT 1
+      const hasDht1 = (telemetry.temperature !== undefined || telemetry.temperature1 !== undefined || telemetry.humidity !== undefined || telemetry.humidity1 !== undefined) ||
+                      (positions.temperature !== undefined || positions.temperature1 !== undefined || positions.humidity !== undefined || positions.humidity1 !== undefined);
+      if (hasDht1) dhtCount++;
+
+      // Check for DHT 2
+      const hasDht2 = (telemetry.temperature2 !== undefined || telemetry.humidity2 !== undefined) ||
+                      (positions.temperature2 !== undefined || positions.humidity2 !== undefined);
+      if (hasDht2) dhtCount++;
+
+      // Check for Soil 1
+      const hasSoil1 = (telemetry.soilMoisture !== undefined || telemetry.soilMoisture1 !== undefined) ||
+                       (positions.soilMoisture !== undefined || positions.soilMoisture1 !== undefined);
+      if (hasSoil1) soilCount++;
+
+      // Check for Soil 2
+      const hasSoil2 = telemetry.soilMoisture2 !== undefined || positions.soilMoisture2 !== undefined;
+      if (hasSoil2) soilCount++;
+
+      // Check for Water 1
+      const hasWater1 = (telemetry.waterLevel !== undefined || telemetry.waterLevel1 !== undefined) ||
+                        (positions.waterLevel !== undefined || positions.waterLevel1 !== undefined);
+      if (hasWater1) waterCount++;
+
+      // Check for Water 2
+      const hasWater2 = telemetry.waterLevel2 !== undefined || positions.waterLevel2 !== undefined;
+      if (hasWater2) waterCount++;
+
+      // Check for Light 1
+      const hasLight1 = (telemetry.lightIntensity !== undefined || telemetry.lightIntensity1 !== undefined) ||
+                        (positions.lightIntensity !== undefined || positions.lightIntensity1 !== undefined);
+      if (hasLight1) lightCount++;
+
+      // Check for Light 2
+      const hasLight2 = telemetry.lightIntensity2 !== undefined || positions.lightIntensity2 !== undefined;
+      if (hasLight2) lightCount++;
     });
 
-    const total = pumpCount + dhtCount + soilCount + lightCount + otherCount;
-    return { total, pumpCount, dhtCount, soilCount, lightCount, otherCount };
+    const total = pumpCount + dhtCount + soilCount + lightCount + waterCount + otherCount;
+    return { total, pumpCount, dhtCount, soilCount, lightCount, waterCount, otherCount };
   };
 
   const stats = getPhysicalCounts();
@@ -512,6 +510,7 @@ export const Dashboard: React.FC = () => {
       { count: stats.dhtCount, color: '#ea4335', label: 'Cảm biến nhiệt ẩm' },
       { count: stats.soilCount, color: '#fbcb05', label: 'Cảm biến độ ẩm đất' },
       { count: stats.lightCount, color: '#34a853', label: 'Cảm biến ánh sáng' },
+      { count: stats.waterCount || 0, color: '#9333ea', label: 'Cảm biến mực nước' },
       { count: stats.otherCount, color: '#9aa0a6', label: 'Thiết bị khác' }
     ].filter((s) => s.count > 0);
 
@@ -828,6 +827,15 @@ export const Dashboard: React.FC = () => {
                       <span>Cảm biến ánh sáng</span>
                     </div>
                     <span className="legend-value">{stats.lightCount}</span>
+                  </div>
+
+                  {/* Item 4.5: Water */}
+                  <div className="legend-item">
+                    <div className="legend-label-group">
+                      <span className="legend-color-dot" style={{ backgroundColor: '#9333ea' }}></span>
+                      <span>Cảm biến mực nước</span>
+                    </div>
+                    <span className="legend-value">{stats.waterCount || 0}</span>
                   </div>
 
                   {/* Item 5: Others */}
