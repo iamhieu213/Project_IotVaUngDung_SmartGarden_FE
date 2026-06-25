@@ -117,7 +117,7 @@ export const SensorCard: React.FC<SensorCardProps> = ({
         <span className={`status-dot ${isSensorOnline ? 'active' : 'error animate-pulse'}`}></span>
         
         {/* Giá trị hiển thị ở trên đầu */}
-        <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--db-on-surface)', lineHeight: 1, marginTop: '2px', zIndex: 2 }}>
+        <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--db-on-surface)', lineHeight: 1, marginTop: '2px', zIndex: 2, whiteSpace: 'nowrap' }}>
           {valStr}
         </span>
 
