@@ -25,7 +25,6 @@ interface ComponentItem {
   status: boolean; // parent online status
   lastUpdate: string;
   isOffline: boolean;
-  thingsboardAccessToken?: string;
   rawTelemetry?: any;
 }
 
@@ -110,6 +109,13 @@ export const Devices: React.FC = () => {
             type: 'Ánh sáng (lux)',
             icon: 'light_mode',
             unit: 'lux'
+          },
+          {
+            key: 'waterLevel',
+            name: 'Cảm biến Mực nước',
+            type: 'Mực nước (mm)',
+            icon: 'water_drop',
+            unit: 'mm'
           }
         ];
 
@@ -147,7 +153,6 @@ export const Devices: React.FC = () => {
               status: !compOffline,
               lastUpdate,
               isOffline: compOffline,
-              thingsboardAccessToken: dev.thingsboardAccessToken,
               rawTelemetry: telemetry
             });
           }
@@ -181,7 +186,6 @@ export const Devices: React.FC = () => {
               status: !compOffline,
               lastUpdate,
               isOffline: compOffline,
-              thingsboardAccessToken: dev.thingsboardAccessToken,
               rawTelemetry: telemetry
             });
           }
@@ -216,7 +220,6 @@ export const Devices: React.FC = () => {
           status,
           lastUpdate,
           isOffline,
-          thingsboardAccessToken: dev.thingsboardAccessToken,
           rawTelemetry: dev.latestTelemetry
         });
       }
@@ -522,7 +525,19 @@ export const Devices: React.FC = () => {
         if (soil2.isOffline) offline++;
       }
 
+      // 5. Water 1
+      const water1 = checkSensor(['waterLevel', 'waterLevel1']);
+      if (water1) {
+        total++;
+        if (water1.isOffline) offline++;
+      }
 
+      // 6. Water 2
+      const water2 = checkSensor(['waterLevel2']);
+      if (water2) {
+        total++;
+        if (water2.isOffline) offline++;
+      }
 
       // 7. Light 1
       const light1 = checkSensor(['lightIntensity', 'lightIntensity1', 'lightLevel']);
@@ -808,15 +823,9 @@ export const Devices: React.FC = () => {
                       {!selectedComponent.isOffline ? 'Trực tuyến (Online)' : 'Ngoại tuyến (Offline)'}
                     </p>
                   </div>
-                  <div className="config-item-box">
+                  <div className="config-item-box" style={{ gridColumn: 'span 2' }}>
                     <p className="config-item-lbl">Địa chỉ MAC (Device ID)</p>
                     <p className="config-item-val" style={{ fontFamily: 'monospace' }}>{selectedComponent.parentDeviceId}</p>
-                  </div>
-                  <div className="config-item-box" style={{ gridColumn: 'span 2' }}>
-                    <p className="config-item-lbl">Thingsboard Access Token</p>
-                    <p className="config-item-val" style={{ fontFamily: 'monospace', wordBreak: 'break-all', fontSize: '12px' }}>
-                      {selectedComponent.thingsboardAccessToken || 'Không khả dụng'}
-                    </p>
                   </div>
                   {(() => {
                     const parentDevice = rawDevices.find((d) => d.id === selectedComponent.parentId);
