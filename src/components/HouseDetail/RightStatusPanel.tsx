@@ -172,10 +172,10 @@ export const RightStatusPanel: React.FC<RightStatusPanelProps> = ({
 
                     const isOnline = device.status === 'online';
                     const telemetryKeys = device.latestTelemetry
-                      ? Object.keys(device.latestTelemetry).filter((k: string) => k !== 'createdAt')
+                      ? Object.keys(device.latestTelemetry).filter((k: string) => k !== 'createdAt' && k !== 'pumpState' && k !== 'pump')
                       : [];
                     const positionedKeys = device.sensorPositions
-                      ? Object.keys(device.sensorPositions)
+                      ? Object.keys(device.sensorPositions).filter((k: string) => k !== 'pumpState' && k !== 'pump')
                       : [];
                     const availableSensors = Array.from(new Set([...telemetryKeys, ...positionedKeys]));
 
