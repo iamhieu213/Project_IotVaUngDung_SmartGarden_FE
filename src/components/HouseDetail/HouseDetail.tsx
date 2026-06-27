@@ -10,7 +10,6 @@ import { SensorStatsBar } from './SensorStatsBar';
 import { FarmHudControls } from './FarmHudControls';
 import { SensorCard } from './SensorCard';
 import { RightStatusPanel } from './RightStatusPanel';
-import { ChatAI } from '../ChatAI/ChatAI';
 
 // Import custom hook
 import { useHouseDetailState } from './useHouseDetailState';
@@ -309,9 +308,6 @@ export const HouseDetail: React.FC = () => {
           />
         </div>
       </main>
-
-      {/* Trợ lý Chatbot AI */}
-      <ChatAI currentHouseId={id} />
     </div>
   );
 };

@@ -7,7 +7,6 @@ import { NotificationDropdown } from '../NotificationDropdown/NotificationDropdo
 import Swal from 'sweetalert2';
 import api from '../../utils/api';
 import { io } from 'socket.io-client';
-import { ChatAI } from '../ChatAI/ChatAI';
 
 interface Device {
   id: string;
@@ -857,9 +856,6 @@ export const Dashboard: React.FC = () => {
       <button type="button" className="fab-btn" title="Thêm thiết bị" onClick={() => navigate('/devices')}>
         <span className="fab-icon">add</span>
       </button>
-
-      {/* Trợ lý Chatbot AI */}
-      <ChatAI currentHouseId={selectedHouseId} />
     </div>
   );
 };
